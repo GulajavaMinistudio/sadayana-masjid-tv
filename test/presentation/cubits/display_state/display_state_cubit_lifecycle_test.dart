@@ -126,12 +126,8 @@ void main() {
     when(
       () => mockSettingsRepo.getSettings(),
     ).thenAnswer((_) async => const Settings());
-    when(
-      () => mockWisdomRepo.getByIds(any()),
-    ).thenAnswer((_) async => []);
-    when(
-      () => mockSlideshowRepo.getAll(),
-    ).thenAnswer((_) async => []);
+    when(() => mockWisdomRepo.getByIds(any())).thenAnswer((_) async => []);
+    when(() => mockSlideshowRepo.getAll()).thenAnswer((_) async => []);
     when(
       () => mockImamScheduleRepo.getScheduleForDay(any()),
     ).thenAnswer((_) async => []);
@@ -140,9 +136,7 @@ void main() {
     when(
       () => mockPrayerCubit.stream,
     ).thenAnswer((_) => prayerStreamCtrl.stream);
-    when(
-      () => mockPrayerCubit.state,
-    ).thenReturn(PrayerTimeInitial());
+    when(() => mockPrayerCubit.state).thenReturn(PrayerTimeInitial());
 
     // Default evaluate: kembalikan StandbyState
     when(
@@ -163,7 +157,7 @@ void main() {
   });
 
   /// Helper untuk membangun cubit dengan semua dependency
-  DisplayStateCubit _buildCubit() => DisplayStateCubit(
+  DisplayStateCubit buildCubit() => DisplayStateCubit(
     evaluateUseCase: mockEvaluate,
     prayerTimeCubit: mockPrayerCubit,
     settingsRepository: mockSettingsRepo,
@@ -192,7 +186,7 @@ void main() {
         ).thenAnswer((_) => completer.future);
 
         // Buat cubit — ini otomatis memanggil init() di constructor
-        final cubit = _buildCubit();
+        final cubit = buildCubit();
 
         // Act: segera close sebelum init() selesai
         await cubit.close();
@@ -210,7 +204,7 @@ void main() {
       'onSettingsChanged() does NOT throw StateError when cubit is closed during async',
       () async {
         // Arrange: buat cubit dan tunggu init() selesai
-        final cubit = _buildCubit();
+        final cubit = buildCubit();
         await Future.delayed(const Duration(milliseconds: 50));
 
         // Blokir getSettings() untuk panggilan berikutnya dari onSettingsChanged

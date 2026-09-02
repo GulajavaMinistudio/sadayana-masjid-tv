@@ -89,22 +89,14 @@ void main() {
     ImagePickerPlatform.instance = mockPickerPlatform;
 
     // Default stubs
-    when(
-      () => mockDisplayCubit.onSettingsChanged(),
-    ).thenAnswer((_) async {});
+    when(() => mockDisplayCubit.onSettingsChanged()).thenAnswer((_) async {});
     when(() => mockRepo.getAll()).thenAnswer((_) async => []);
-    when(
-      () => mockRepo.getBySlot(any()),
-    ).thenAnswer((_) async => null);
-    when(
-      () => mockRepo.deleteBySlot(any()),
-    ).thenAnswer((_) async {});
-    when(
-      () => mockStorage.deleteStoredImage(any()),
-    ).thenAnswer((_) async {});
+    when(() => mockRepo.getBySlot(any())).thenAnswer((_) async => null);
+    when(() => mockRepo.deleteBySlot(any())).thenAnswer((_) async {});
+    when(() => mockStorage.deleteStoredImage(any())).thenAnswer((_) async {});
   });
 
-  SlideshowSectionCubit _buildCubit() => SlideshowSectionCubit(
+  SlideshowSectionCubit buildCubit() => SlideshowSectionCubit(
     imageRepository: mockRepo,
     storageService: mockStorage,
     displayStateCubit: mockDisplayCubit,
@@ -124,11 +116,9 @@ void main() {
       () async {
         // Arrange: blokir repo.getAll() dengan Completer
         final completer = Completer<List<SlideshowImage>>();
-        when(
-          () => mockRepo.getAll(),
-        ).thenAnswer((_) => completer.future);
+        when(() => mockRepo.getAll()).thenAnswer((_) => completer.future);
 
-        final cubit = _buildCubit();
+        final cubit = buildCubit();
 
         // Act
         final future = cubit.loadImages();
@@ -148,9 +138,7 @@ void main() {
       'deleteFromSlot() does NOT throw StateError when cubit is closed during async',
       () async {
         // Arrange: stub getBySlot agar mengembalikan gambar yang akan dihapus
-        when(
-          () => mockRepo.getBySlot(1),
-        ).thenAnswer((_) async => _kSlot1);
+        when(() => mockRepo.getBySlot(1)).thenAnswer((_) async => _kSlot1);
 
         // Blokir deleteBySlot() agar cubit bisa di-close sebelum lanjut
         final completer = Completer<void>();
@@ -158,7 +146,7 @@ void main() {
           () => mockRepo.deleteBySlot(1),
         ).thenAnswer((_) => completer.future);
 
-        final cubit = _buildCubit();
+        final cubit = buildCubit();
 
         // Act
         final future = cubit.deleteFromSlot(1);

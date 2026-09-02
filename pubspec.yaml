@@ -45,9 +45,9 @@ dependencies:
   hijri: ^3.0.1
   intl: ^0.20.3
   flutter_bloc: ^9.1.1
-  firebase_core: ^4.13.0
-  firebase_analytics: ^12.4.6
-  firebase_crashlytics: ^5.2.7
+  firebase_core: ^4.14.0
+  firebase_analytics: ^12.5.0
+  firebase_crashlytics: ^5.3.0
   audioplayers: ^6.8.1
   audioplayers_android_exo: ^0.1.4
   image_picker: ^1.2.3
@@ -63,7 +63,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
-  sqflite_common_ffi: ^2.4.2
+  sqflite_common_ffi: ^2.4.2+1
   bloc_test: ^10.0.0
   mocktail: ^1.0.5
   image_picker_platform_interface: ^2.11.1
