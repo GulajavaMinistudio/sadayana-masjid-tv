@@ -202,6 +202,7 @@ flutter run
 | -------------------------------------------------------------------- | ----------------------------------------------------------- |
 | [`Product_Requirement_Document.md`](Product_Requirement_Document.md) | PRD lengkap dengan functional & non-functional requirements |
 | [`docs/SPECIFICATION_OVERVIEW.md`](docs/SPECIFICATION_OVERVIEW.md)   | Overview 6 technical specifications                         |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)                       | Peta arsitektur kanonik: topologi, seams, invariant         |
 | [`docs/ARCHITECTURE_PATTERNS.md`](docs/ARCHITECTURE_PATTERNS.md)     | State machine, offline-first, timer patterns                |
 | [`docs/UI_UX_GUIDE.md`](docs/UI_UX_GUIDE.md)                         | Android TV design, ScreenUtil, glassmorphism                |
 | [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md)                     | Testing strategies (SQLite, Cubit, widget)                  |

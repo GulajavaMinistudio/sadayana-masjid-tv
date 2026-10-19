@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(findstr /s /n /c:\"isClosed\" lib\\presentation\\cubits\\*.dart 2>nul | findstr /v /c:\"\" /c:\"isClosed\" && echo ---FOUND-ISCLOSED--- || echo ---NONE-ISCLOSED---)",
+      "Shell(findstr:*)",
+      "Shell(findstr /s /n /c:\"/data/\" lib\\presentation\\*.dart lib\\presentation\\*\\*.dart lib\\presentation\\*\\*\\*.dart 2>nul)",
+      "Shell(findstr /s /n /c:\"miqotul_khoir_tv/data\" lib\\presentation\\*.dart lib\\presentation\\*\\*.dart lib\\presentation\\*\\*\\*.dart lib\\presentation\\*\\*\\*\\*.dart 2>nul)",
+      "Shell(findstr /s /n /c:\"miqotul_khoir_tv/data\" lib\\domain\\*.dart lib\\domain\\*\\*.dart lib\\domain\\*\\*\\*.dart 2>nul)",
+      "Shell(node diagram.js)"
+    ],
+    "deny": [],
+    "defaultMode": "default"
+  }
+}

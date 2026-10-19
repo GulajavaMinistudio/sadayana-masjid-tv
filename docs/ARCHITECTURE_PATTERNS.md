@@ -4,6 +4,9 @@
 
 Guide ini mencakup architectural patterns yang digunakan dalam project **Miqotul Khoir TV (MKT)**, termasuk state machine pattern, offline-first data management, prayer time calculation patterns, timer management, dan proven patterns untuk Android TV digital signage.
 
+> [!IMPORTANT]
+> **Peta arsitektur kanonik:** Untuk topologi sistem, Clean Architecture seams, dan invariant yang terverifikasi dari kode, lihat [`docs/ARCHITECTURE.md`](ARCHITECTURE.md). Contoh kode di panduan ini bersifat ilustratif untuk menjelaskan pola — implementasi aktual di `lib/` adalah sumber kebenaran (source of truth). Untuk skema database terkini, lihat [`lib/data/datasources/database_helper.dart`](../lib/data/datasources/database_helper.dart) dan [`spec/spec-schema-database.md`](../spec/spec-schema-database.md).
+
 ## Table of Contents
 
 - [State Machine Pattern](#state-machine-pattern)
@@ -20,318 +23,112 @@ Guide ini mencakup architectural patterns yang digunakan dalam project **Miqotul
 
 ## State Machine Pattern
 
-Pattern utama untuk display logic aplikasi. Aplikasi memiliki 5 state yang transition secara otomatis berdasarkan waktu.
+Pattern utama untuk display logic aplikasi. State diturunkan dari **sealed class `DisplayState`** di [`lib/domain/entities/display_state.dart`](../lib/domain/entities/display_state.dart) dan transition secara otomatis berdasarkan waktu — total **9 state** (5 fase sholat + 4 state informasi terjadwal).
 
-### 5-State Hierarchy
+### 9-State Hierarchy
 
 ```dart
-/// Base abstract class untuk semua display states
-abstract class DisplayState extends Equatable {
+/// Base sealed class untuk semua display states (lib/domain/entities/display_state.dart)
+sealed class DisplayState extends Equatable {
   const DisplayState();
+
+  DisplayStateType get type;
+
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [type];
 }
 
-/// 1. STANDBY - Default state menampilkan semua info
+/// Contoh state konkret — Standby (status default):
 class StandbyState extends DisplayState {
+  final DailyPrayerTimes? dailyPrayerTimes;
+  final PrayerTime? nextPrayer;
+  final Duration? timeToNextPrayer;
+  final String? runningText;
+  final String? hijriDate;
   final DateTime currentTime;
-  final List<PrayerTime> prayerTimes;
-  final String runningText;
-  
+
   const StandbyState({
+    this.dailyPrayerTimes,
+    this.nextPrayer,
+    this.timeToNextPrayer,
+    this.runningText,
+    this.hijriDate,
     required this.currentTime,
-    required this.prayerTimes,
-    required this.runningText,
   });
-  
-  @override
-  List<Object?> get props => [currentTime, prayerTimes, runningText];
-}
 
-/// 2. PRE_ADZAN - Countdown H-10 menit sebelum adzan
-class PreAdzanState extends DisplayState {
-  final PrayerTime nextPrayer;
-  final Duration remainingTime;
-  
-  const PreAdzanState({
-    required this.nextPrayer,
-    required this.remainingTime,
-  });
-  
   @override
-  List<Object?> get props => [nextPrayer, remainingTime];
-}
+  DisplayStateType get type => DisplayStateType.standby;
 
-/// 3. ADZAN - Waktu sholat masuk, play audio
-class AdzanState extends DisplayState {
-  final PrayerTime currentPrayer;
-  
-  const AdzanState({required this.currentPrayer});
-  
   @override
-  List<Object?> get props => [currentPrayer];
-}
-
-/// 4. IQOMAH - Countdown menuju waktu sholat
-class IqomahState extends DisplayState {
-  final PrayerTime currentPrayer;
-  final Duration remainingTime;
-  
-  const IqomahState({
-    required this.currentPrayer,
-    required this.remainingTime,
-  });
-  
-  @override
-  List<Object?> get props => [currentPrayer, remainingTime];
-}
-
-/// 5. SHOLAT - Blank screen / dimmed untuk prevent burn-in
-class SholatState extends DisplayState {
-  final PrayerTime currentPrayer;
-  final DateTime endTime;
-  
-  const SholatState({
-    required this.currentPrayer,
-    required this.endTime,
-  });
-  
-  @override
-  List<Object?> get props => [currentPrayer, endTime];
+  List<Object?> get props => [
+    dailyPrayerTimes,
+    nextPrayer,
+    timeToNextPrayer,
+    runningText,
+    hijriDate,
+    currentTime,
+  ];
 }
 ```
+
+9 state konkret (masing-masing memiliki nilai `type` di enum `DisplayStateType`):
+
+| # | State | Pemicu (window waktu) |
+| :-: | :--- | :--- |
+| 1 | `StandbyState` | Default — menunggu waktu sholat berikutnya |
+| 2 | `PreAdzanState` | H-N menit sebelum adzan (default 10, dapat dikonfigurasi) |
+| 3 | `AdzanState` | Waktu adzan tiba (durasi `adzan_duration_seconds`, default 180 detik) |
+| 4 | `IqomahState` | Setelah rentang adzan berakhir (durasi iqomah per sholat; Jum'at memiliki durasi sendiri) |
+| 5 | `SholatState` | Setelah iqomah (durasi per sholat; Jum'at default 45 menit) |
+| 6 | `SlideshowAnnouncementState` | Interval terjadwal di dalam window waktu (fitur opsional) |
+| 7 | `ImamScheduleState` | Interval terjadwal di dalam window waktu (fitur opsional) |
+| 8 | `WisdomQuoteState` | Interval terjadwal di dalam window waktu (fitur opsional) |
+| 9 | `MidnightStandbyState` | Window jam malam cross-midnight (fitur opsional) |
 
 ### State Transition Logic
 
-```dart
-class DisplayStateCubit extends Cubit<DisplayState> {
-  final PrayerTimeRepository _prayerRepository;
-  final SettingsRepository _settingsRepository;
-  Timer? _stateCheckTimer;
-  
-  DisplayStateCubit({
-    required PrayerTimeRepository prayerRepository,
-    required SettingsRepository settingsRepository,
-  })  : _prayerRepository = prayerRepository,
-        _settingsRepository = settingsRepository,
-        super(const StandbyState(
-          currentTime: DateTime.now(),
-          prayerTimes: [],
-          runningText: '',
-        )) {
-    _initializeStateChecking();
-  }
-  
-  /// Initialize periodic state checking (setiap 1 detik)
-  void _initializeStateChecking() {
-    _stateCheckTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      _checkAndTransitionState();
-    });
-  }
-  
-  /// Core state transition logic
-  Future<void> _checkAndTransitionState() async {
-    final now = DateTime.now();
-    final prayerTimes = await _prayerRepository.getTodayPrayerTimes();
-    final settings = await _settingsRepository.getSettings();
-    
-    // Find next prayer time
-    final nextPrayer = _findNextPrayer(now, prayerTimes);
-    if (nextPrayer == null) {
-      // No more prayers today, stay in standby
-      emit(StandbyState(
-        currentTime: now,
-        prayerTimes: prayerTimes,
-        runningText: settings.runningText,
-      ));
-      return;
-    }
-    
-    final timeUntilPrayer = nextPrayer.time.difference(now);
-    
-    // State transition logic
-    if (timeUntilPrayer <= Duration.zero) {
-      // Prayer time has passed, check if in Iqomah or Sholat state
-      final currentState = state;
-      
-      if (currentState is AdzanState) {
-        // Transition from Adzan to Iqomah
-        final iqomahDuration = _getIqomahDuration(nextPrayer.type, settings);
-        emit(IqomahState(
-          currentPrayer: nextPrayer,
-          remainingTime: iqomahDuration,
-        ));
-      } else if (currentState is IqomahState) {
-        // Check if Iqomah countdown finished
-        if (currentState.remainingTime <= Duration.zero) {
-          // Transition to Sholat (blank/dimmed screen)
-          final sholatDuration = Duration(minutes: 15); // Configurable
-          emit(SholatState(
-            currentPrayer: nextPrayer,
-            endTime: now.add(sholatDuration),
-          ));
-        }
-      } else if (currentState is SholatState) {
-        // Check if Sholat time finished
-        if (now.isAfter(currentState.endTime)) {
-          // Back to Standby
-          emit(StandbyState(
-            currentTime: now,
-            prayerTimes: prayerTimes,
-            runningText: settings.runningText,
-          ));
-        }
-      } else {
-        // Currently at exact prayer time
-        emit(AdzanState(currentPrayer: nextPrayer));
-      }
-    } else if (timeUntilPrayer <= Duration(minutes: 10)) {
-      // Pre-Adzan state (H-10 minutes)
-      emit(PreAdzanState(
-        nextPrayer: nextPrayer,
-        remainingTime: timeUntilPrayer,
-      ));
-    } else {
-      // Standby state
-      emit(StandbyState(
-        currentTime: now,
-        prayerTimes: prayerTimes,
-        runningText: settings.runningText,
-      ));
-    }
-  }
-  
-  PrayerTime? _findNextPrayer(DateTime now, List<PrayerTime> times) {
-    return times.firstWhereOrNull(
-      (prayer) => prayer.time.isAfter(now),
-    );
-  }
-  
-  Duration _getIqomahDuration(PrayerType type, Settings settings) {
-    return switch (type) {
-      PrayerType.subuh => Duration(minutes: settings.iqomahSubuh),
-      PrayerType.dzuhur => Duration(minutes: settings.iqomahDzuhur),
-      PrayerType.ashar => Duration(minutes: settings.iqomahAshar),
-      PrayerType.maghrib => Duration(minutes: settings.iqomahMaghrib),
-      PrayerType.isya => Duration(minutes: settings.iqomahIsya),
-      _ => Duration(minutes: 10), // Default
-    };
-  }
-  
-  @override
-  Future<void> close() {
-    _stateCheckTimer?.cancel();
-    return super.close();
-  }
-}
+Implementasi aktual: [`DisplayStateCubit`](../lib/presentation/cubits/display_state/display_state_cubit.dart) mengevaluasi ulang state **setiap 1 detik** (`Timer.periodic`) melalui [`EvaluateDisplayStateUseCase`](../lib/domain/usecases/evaluate_display_state_use_case.dart) — pure function dengan urutan prioritas deterministik **first match wins**:
+
+```text
+prayer phases → midnight → slideshow → imam_schedule → wisdom → standby
 ```
+
+Di dalam fase sholat, window dicek berurutan per waktu sholat: Pre-Adzan → Adzan → Iqomah → Sholat, masing-masing berdasarkan durasi dari `TransitionConfig` (pre-adzan, durasi adzan, iqomah per sholat, durasi sholat; khusus Jum'at memakai durasi tersendiri).
 
 ### State-Based UI Rendering
 
+Implementasi aktual: [`MainDisplayPage`](../lib/presentation/pages/main_display_page.dart) memetakan `state.type` (enum `DisplayStateType`) ke 9 layout terdedikasi di [`lib/presentation/pages/main_display/layouts/`](../lib/presentation/pages/main_display/layouts/). Setiap layout menerima state konkret hasil cast.
+
 ```dart
-class MainDisplayPage extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return BlocBuilder<DisplayStateCubit, DisplayState>(
-      builder: (context, state) {
-        return switch (state) {
-          StandbyState() => _buildStandbyDisplay(state),
-          PreAdzanState() => _buildPreAdzanDisplay(state),
-          AdzanState() => _buildAdzanDisplay(state),
-          IqomahState() => _buildIqomahDisplay(state),
-          SholatState() => _buildSholatDisplay(state),
-        };
-      },
-    );
-  }
-  
-  Widget _buildStandbyDisplay(StandbyState state) {
-    return Stack(
-      children: [
-        // Background image with overlay
-        _buildBackground(),
-        
-        // Main content
-        Column(
-          children: [
-            // Header: Logo, Nama Masjid, Tanggal
-            _buildHeader(state),
-            
-            Expanded(
-              child: Row(
-                children: [
-                  // Left: Large clock
-                  Expanded(
-                    flex: 2,
-                    child: _buildLargeClock(state.currentTime),
-                  ),
-                  
-                  // Right: Info panel
-                  Expanded(
-                    flex: 1,
-                    child: _buildInfoPanel(state),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Bottom: 7 Prayer time cards
-            _buildPrayerTimeCards(state.prayerTimes),
-            
-            // Footer: Running text
-            _buildRunningText(state.runningText),
-          ],
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildPreAdzanDisplay(PreAdzanState state) {
-    return Stack(
-      children: [
-        _buildBackground(),
-        Column(
-          children: [
-            _buildHeader(state),
-            
-            Expanded(
-              child: Center(
-                child: CountdownTimer(
-                  remainingTime: state.remainingTime,
-                  nextPrayer: state.nextPrayer,
-                  isPreAdzan: true,
-                ),
-              ),
-            ),
-            
-            // Prayer time cards dengan highlight pada next prayer
-            _buildPrayerTimeCards(
-              state.prayerTimes,
-              highlightedPrayer: state.nextPrayer,
-            ),
-            
-            _buildRunningText(state.runningText),
-          ],
-        ),
-      ],
-    );
-  }
-  
-  Widget _buildSholatDisplay(SholatState state) {
-    // Blank screen atau dimmed clock untuk prevent burn-in
-    return Container(
-      color: Colors.black,
-      child: Center(
-        child: Opacity(
-          opacity: 0.1,
-          child: Text(
-            DateFormat('HH:mm').format(DateTime.now()),
-            style: TextStyle(fontSize: 24.sp, color: Colors.grey),
-          ),
-        ),
-      ),
-    );
-  }
+// Ilustrasi pola pemetaan state → layout (disederhanakan dari MainDisplayPage)
+switch (state.type) {
+  case DisplayStateType.standby:
+    layoutWidget = StandbyLayout(state: state as StandbyState);
+    break;
+  case DisplayStateType.preAdzan:
+    layoutWidget = PreAdzanLayout(state: state as PreAdzanState);
+    break;
+  case DisplayStateType.adzan:
+    layoutWidget = AdzanLayout(state: state as AdzanState);
+    break;
+  case DisplayStateType.iqomah:
+    layoutWidget = IqomahLayout(state: state as IqomahState);
+    break;
+  case DisplayStateType.sholat:
+    layoutWidget = SholatLayout(state: state as SholatState);
+    break;
+  case DisplayStateType.slideshowAnnouncement:
+    layoutWidget = SlideshowLayout(state: state as SlideshowAnnouncementState);
+    break;
+  case DisplayStateType.imamSchedule:
+    layoutWidget = ImamScheduleLayout(state: state as ImamScheduleState);
+    break;
+  case DisplayStateType.wisdomQuote:
+    layoutWidget = WisdomQuoteLayout(state: state as WisdomQuoteState);
+    break;
+  case DisplayStateType.midnightStandby:
+    layoutWidget = MidnightStandbyLayout(state: state as MidnightStandbyState);
+    break;
 }
 ```
 
@@ -520,136 +317,32 @@ class PrayerTimeCubit extends Cubit<PrayerTimeState> {
 
 Pattern untuk SQLite database sebagai single source of truth.
 
-### Database Schema
+### Database Schema (v11 — Ringkasan)
 
-```dart
-class DatabaseHelper {
-  static const String _dbName = 'miqotul_khoir.db';
-  static const int _dbVersion = 1;
-  
-  // Singleton pattern
-  static final DatabaseHelper instance = DatabaseHelper._internal();
-  static Database? _database;
-  
-  DatabaseHelper._internal();
-  
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    _database = await _initDatabase();
-    return _database!;
-  }
-  
-  Future<Database> _initDatabase() async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, _dbName);
-    
-    return await openDatabase(
-      path,
-      version: _dbVersion,
-      onCreate: _onCreate,
-      onUpgrade: _onUpgrade,
-    );
-  }
-  
-  Future<void> _onCreate(Database db, int version) async {
-    // Settings table (singleton - only 1 row)
-    await db.execute('''
-      CREATE TABLE settings (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        is_first_run INTEGER DEFAULT 1,
-        
-        -- Mosque Identity
-        mosque_name TEXT NOT NULL DEFAULT '',
-        mosque_address TEXT NOT NULL DEFAULT '',
-        
-        -- Location
-        city_name TEXT,
-        latitude REAL NOT NULL,
-        longitude REAL NOT NULL,
-        timezone TEXT NOT NULL DEFAULT 'Asia/Jakarta',
-        
-        -- Prayer Time Corrections (Minutes)
-        offset_subuh INTEGER DEFAULT 0,
-        offset_syuruq INTEGER DEFAULT 0,
-        offset_dhuha INTEGER DEFAULT 0,
-        offset_dzuhur INTEGER DEFAULT 0,
-        offset_ashar INTEGER DEFAULT 0,
-        offset_maghrib INTEGER DEFAULT 0,
-        offset_isya INTEGER DEFAULT 0,
-        
-        -- Hijri Date Adjustment (Days)
-        hijri_adjustment INTEGER DEFAULT 0,
-        
-        -- Iqomah Delays (Minutes)
-        iqomah_subuh INTEGER DEFAULT 10,
-        iqomah_dzuhur INTEGER DEFAULT 10,
-        iqomah_ashar INTEGER DEFAULT 10,
-        iqomah_maghrib INTEGER DEFAULT 7,
-        iqomah_isya INTEGER DEFAULT 10,
-        
-        -- Content
-        running_text TEXT DEFAULT ''
-      )
-    ''');
-    
-    // Cities table (pre-populated for setup wizard)
-    await db.execute('''
-      CREATE TABLE cities (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        province_name TEXT NOT NULL,
-        city_name TEXT NOT NULL,
-        latitude REAL NOT NULL,
-        longitude REAL NOT NULL
-      )
-    ''');
-    
-    // Create index for faster city lookup
-    await db.execute('''
-      CREATE INDEX idx_city_name ON cities(city_name)
-    ''');
-    
-    // Insert default settings row
-    await db.insert('settings', {
-      'id': 1,
-      'is_first_run': 1,
-      'mosque_name': '',
-      'mosque_address': '',
-      'latitude': -6.2088, // Jakarta default
-      'longitude': 106.8456,
-      'timezone': 'Asia/Jakarta',
-    });
-    
-    // Pre-populate cities (example data)
-    await _populateCities(db);
-  }
-  
-  Future<void> _populateCities(Database db) async {
-    final cities = [
-      {'province_name': 'DKI Jakarta', 'city_name': 'Jakarta Pusat', 
-       'latitude': -6.1745, 'longitude': 106.8227},
-      {'province_name': 'Jawa Barat', 'city_name': 'Bandung', 
-       'latitude': -6.9175, 'longitude': 107.6191},
-      {'province_name': 'Jawa Barat', 'city_name': 'Bogor', 
-       'latitude': -6.5950, 'longitude': 106.7968},
-      {'province_name': 'Jawa Tengah', 'city_name': 'Semarang', 
-       'latitude': -6.9667, 'longitude': 110.4167},
-      {'province_name': 'Jawa Timur', 'city_name': 'Surabaya', 
-       'latitude': -7.2575, 'longitude': 112.7521},
-      // ... add more cities
-    ];
-    
-    for (final city in cities) {
-      await db.insert('cities', city);
-    }
-  }
-  
-  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Handle database migrations
-  }
-}
-```
+> Skema kanonik & migrasi: [`lib/data/datasources/database_helper.dart`](../lib/data/datasources/database_helper.dart) · Perencanaan: [`spec/spec-schema-database.md`](../spec/spec-schema-database.md).
+
+Database `miqotul_khoir.db` (SQLite, versi **11**) berisi 5 tabel:
+
+| Tabel | Peran | Catatan kunci |
+| :--- | :--- | :--- |
+| `settings` | Konfigurasi global | Singleton (`CHECK (id = 1)`); ±60 kolom — semua fitur opsional dikonfigurasi di sini |
+| `cities` | Lookup kota/kabupaten untuk Setup Wizard | 514 record di-seed dari `assets/data/cities.json` (termasuk elevasi) |
+| `slideshow_images` | Metadata 3 slot gambar pengumuman | `CHECK (slot_index BETWEEN 1 AND 3)` |
+| `imams` | Master data imam sholat berjamaah | Nama unik; maksimum 10 data (aturan UI) |
+| `imam_schedules` | Jadwal imam per hari per waktu sholat | FK `ON DELETE SET NULL` ke `imams`; `UNIQUE(day_of_week, prayer_name)` |
+
+Karakteristik pola:
+
+- **Foreign key aktif** via `PRAGMA foreign_keys = ON` di callback `onConfigure`.
+- **Migrasi berurutan** `if (oldVersion < N)` dari v2 s/d v11 (penambahan kolom fitur opsional + tabel baru).
+- **Index**: `idx_cities_province`, `idx_cities_name`.
+- **Pola akses**: `RepositoryImpl` → `LocalDataSource` → `DatabaseHelper` (singleton).
+- **Factory reset**: `resetSettings()` menghapus baris settings dan mengisi ulang nilai default.
 
 ### Repository Pattern dengan Transaction Safety
+
+> [!NOTE]
+> Implementasi aktual memisahkan `RepositoryImpl` (kontrak domain) dan `LocalDataSource` (akses SQLite) — lihat `lib/data/`. Contoh di bawah menyederhanakan keduanya menjadi satu kelas untuk fokus pada pola transaction safety.
 
 ```dart
 class SettingsRepository {
@@ -1551,8 +1244,8 @@ group('SettingsCubit Tests', () {
 
 ---
 
-**Last Updated**: February 17, 2026
-**Version**: 2.0.0
+**Last Updated**: October 15, 2026
+**Version**: 2.1.0
 **Project**: Miqotul Khoir TV (MKT)
 **Platform**: Android TV
-**Related Docs**: [AGENTS.md](../AGENTS.md), [Product_Requirement_Document.md](../Product_Requirement_Document.md)
+**Related Docs**: [docs/ARCHITECTURE.md](ARCHITECTURE.md), [AGENTS.md](../AGENTS.md), [Product_Requirement_Document.md](../Product_Requirement_Document.md)

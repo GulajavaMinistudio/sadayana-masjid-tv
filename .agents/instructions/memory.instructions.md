@@ -116,3 +116,68 @@
 <!-- checkpoint-tail: Bug fix emit-after-close SELESAI PENUH. Phase 1 (17 lifecycle tests) + Phase 2 (29 isClosed guards di 5 cubit). Full test suite 535/535 PASS. Tidak ada regresi. Plan v1.2 difinalisasi. Siap commit dan lanjut ke fitur berikutnya. -->
 
 ---
+
+## 📝 Session Checkpoint: 2026-10-15
+
+- **Active Memory Path:** `.agents/instructions/memory.instructions.md`
+- **Current SDLC Phase:** Utility: Architecture Mapping (`/to-map`) — ✅ Completed
+- **Active Artifacts:**
+  - `docs/ARCHITECTURE.md` — Status: ✅ Finalized (canonical architecture map: topology diagram, 9-state machine, seams, 9 invariants, directory matrix, hotspots)
+- **Achieved Milestones:**
+  - Executed full `/to-map` workflow with source-driven scan of `lib/`, `test/`, `docs/`, `spec/`, `plan/`, `assets/`, `android/`, `tools/`, `landingpage/` (zero assumptions; all counts verified from source).
+  - Created `docs/ARCHITECTURE.md` as the canonical architecture map (template-compliant, English technical artifact per AGENTS.md language policy).
+  - Verified architectural invariants by import-scan: `lib/domain/` is pure Dart (only `equatable`/`intl`/`adhan`/`hijri`); no `presentation → data` imports; no `data → presentation` imports; `lib/core/` imports no other layer.
+  - Verified runtime facts: 9-state sealed `DisplayState` with deterministic priority (prayer → midnight → slideshow → imam_schedule → wisdom → standby, 1 s tick); DB schema v11 (5 tables); 514 cities; 11 wisdom quotes; 114 Dart files in `lib/`; 59 test files; DI = RepositoryProvider ×7 + BlocProvider ×3 global.
+  - Added discovery links: `README.md` Dokumentasi table row + `AGENTS.md` Documentation bullet.
+- **Dead-Ends (Do NOT Repeat):**
+  - None encountered in this session.
+- **Updated Files:**
+  - `docs/ARCHITECTURE.md` — NEW canonical architecture map (250 lines).
+  - `README.md` — added `docs/ARCHITECTURE.md` row to Dokumentasi table (pipe-aligned).
+  - `AGENTS.md` — added canonical architecture map link to Documentation bullet.
+- **Decisions Made:**
+  - `docs/ARCHITECTURE.md` is now the canonical topology document; `docs/ARCHITECTURE_PATTERNS.md` is flagged as partially stale (still describes a 5-state machine vs 9 states in code).
+  - Documented pragmatic deviation: `CalculatePrayerTimesUseCase` imports pure-Dart `adhan`/`hijri` inside the domain layer — recommend recording as an ADR.
+  - Recommended bootstrapping `CONTEXT.md` (glossary) and `docs/adr/` (decision records) per AGENTS.md expectations.
+- **Next Action / Pending:**
+  - Update or retire `docs/ARCHITECTURE_PATTERNS.md` (5-state → 9-state drift).
+  - Optionally: create `CONTEXT.md` + first ADRs (adhan/hijri domain dependency; Kemenag SIHAT method).
+  - Consider `git commit` for the docs changes (no commit requested yet; working tree also holds the `/to-init` polya-sdlc migration).
+
+<!-- checkpoint-tail: /to-map completed — docs/ARCHITECTURE.md created (topology, 9 invariants, drift findings), links added to README.md + AGENTS.md. Hotspot: ARCHITECTURE_PATTERNS.md still describes 5-state machine. -->
+
+---
+
+## 📝 Session Checkpoint: 2026-10-15 (Architecture Patterns Drift Fix + Docs Standards Bootstrap)
+
+- **Active Memory Path:** `.agents/instructions/memory.instructions.md`
+- **Current SDLC Phase:** Bypass Mode: `/to-quick-fix` — ✅ Completed (+ documentation standards bootstrap under explicit user-approved session override)
+- **Active Artifacts:**
+  - `docs/ARCHITECTURE_PATTERNS.md` — Status: ✅ Finalized (v2.1.0; drift fixed: 9-state model, schema v11, canonical-map banner)
+  - `CONTEXT.md` — Status: ✅ Created (domain glossary bootstrap, 19 terms, per `.agents/standards/CONTEXT-FORMAT.md`)
+  - `docs/adr/0001-kemenag-sihat-prayer-times.md` — Status: ✅ Created (Accepted)
+  - `docs/adr/0002-pure-dart-astronomy-in-domain.md` — Status: ✅ Created (Accepted)
+- **Achieved Milestones:**
+  - Fixed `docs/ARCHITECTURE_PATTERNS.md` drift (1,562 → 1,252 lines, 7 surgical edits): 5-State Hierarchy → verified 9-State model (sealed class + real `StandbyState` sample + per-state trigger table); transition logic → actual priority chain (`prayer → midnight → slideshow → imam_schedule → wisdom → standby`, 1 s tick via `EvaluateDisplayStateUseCase`); UI rendering → real 9-layout switch (class names verified from `MainDisplayPage`); old v1 DB DDL → v11 summary (5 tables, FK, sequential migrations, indexes); repository note + footer (v2.1.0); canonical-map banner with illustrative-sample disclaimer.
+  - Bootstrapped `CONTEXT.md` (19 domain terms in 3 groups: Prayer Schedule, Display Features, Mosque Administration) and the first two ADRs in `docs/adr/` using `.agents/standards/` formats.
+  - Verified zero residual critical drift via grep (`5-State`, `_dbVersion = 1`, `PrayerTimeRepository`, `_populateCities` all gone). No Dart code touched — docs-only; Flutter test suite unaffected.
+  - Session override exercised: `/to-map` → `/to-quick-fix` → standards work in one session (explicitly authorized by user; `[Session Override Active]` marker printed).
+- **Dead-Ends (Do NOT Repeat):**
+  - None encountered in this session.
+- **Updated Files:**
+  - `docs/ARCHITECTURE_PATTERNS.md` — 7 surgical drift-fix edits.
+  - `CONTEXT.md` — NEW (domain glossary).
+  - `docs/adr/0001-kemenag-sihat-prayer-times.md` — NEW (first ADR).
+  - `docs/adr/0002-pure-dart-astronomy-in-domain.md` — NEW (second ADR).
+- **Decisions Made:**
+  - `docs/ARCHITECTURE.md` stays the single canonical topology source; `ARCHITECTURE_PATTERNS.md` is now a pattern guide whose legacy samples (Prayer Calculation, Setup Wizard, Testing) are explicitly flagged as illustrative by the banner — deeper refresh remains an optional follow-up.
+  - Kemenag SIHAT standard and pure-Dart astronomy in domain recorded as ADR-0001/ADR-0002.
+  - No commits (user instruction); changes stay uncommitted alongside the polya-sdlc toolkit migration.
+- **Next Action / Pending:**
+  - Optional follow-up: deeper refresh of remaining legacy samples in `ARCHITECTURE_PATTERNS.md`.
+  - Optional: `git commit` when the user is ready (docs batch: drift fix + CONTEXT.md + ADRs).
+  - `.commandcode/settings.json` still untracked — decide track vs gitignore before committing.
+
+<!-- checkpoint-tail: ARCHITECTURE_PATTERNS.md drift fixed (9-state + schema v11 + banner), CONTEXT.md bootstrapped (19 terms), ADR 0001-0002 created via standards formats. No commit (per user). Pending: optional legacy-sample refresh, commit decision, settings.json tracking. -->
+
+---
