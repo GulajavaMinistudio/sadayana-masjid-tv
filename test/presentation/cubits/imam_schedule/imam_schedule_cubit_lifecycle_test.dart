@@ -315,7 +315,6 @@ void main() {
           isLocked: false,
         );
         // Gunakan emit protected untuk seed state tanpa async
-        // ignore: invalid_use_of_protected_member
         cubit.emit(loadedState);
 
         // Act: close lalu panggil updateLockState

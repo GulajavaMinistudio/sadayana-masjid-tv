@@ -49,3 +49,7 @@ app.*.map.json
 key.properties
 **/*.keystore
 **/*.jks
+
+# Release signing credentials loaded by android/app/build.gradle.kts.
+# Contains storePassword / keyPassword — NEVER commit this file.
+android/signing.properties

@@ -37,7 +37,6 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "gulajava.mini.miqotul_khoir_tv"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
@@ -61,15 +60,14 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            // signingConfig = signingConfigs.getByName("debug")
             isDebuggable = false
             isJniDebuggable = false
             isShrinkResources = false
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             buildConfigField("boolean", "LOG_ENABLED", "false")
+            // Reads android/signing.properties (keyAlias, keyPassword, storeFile,
+            // storePassword). That file must never be committed to version control.
             signingConfig = signingConfigs.getByName("release")
         }
     }

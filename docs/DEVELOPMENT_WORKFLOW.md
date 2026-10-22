@@ -2,6 +2,9 @@
 
 This guide covers development workflows, commit standards, testing procedures, and deployment strategies for the Miqotul Khoir TV (MKT) Flutter project.
 
+> [!IMPORTANT]
+> **Peta arsitektur kanonik:** Untuk topologi sistem, Clean Architecture seams, perintah verifikasi (`check:fast` / `check:task` / `check:full`), dan quality ratchet yang aktif, lihat [`docs/ARCHITECTURE.md`](ARCHITECTURE.md) §8. Implementasi aktual di `lib/` adalah sumber kebenaran (source of truth) — contoh kode di panduan ini bersifat ilustratif.
+
 ## Git Workflow
 
 ### Commit Message Format
@@ -13,7 +16,7 @@ type(scope): description
 
 Examples:
 feat(prayer): implement astronomical prayer time calculation
-feat(state): add state machine with 5-state transitions
+feat(state): add state machine with 9-state transitions
 fix(db): resolve SQLite transaction safety issue
 fix(ui): fix D-Pad focus traversal on settings screen
 perf(timer): optimize countdown timer memory usage
@@ -65,12 +68,14 @@ flutter test --reporter=expanded
 flutter test --coverage
 
 # Run specific test categories
-flutter test test/unit/              # Unit tests only
-flutter test test/widget/            # Widget tests only
-flutter test integration_test/       # Integration tests only
+flutter test test/domain/              # Domain layer (entities + use cases)
+flutter test test/data/                # Data layer (models, repositories, datasources)
+flutter test test/presentation/        # Presentation layer (cubits, pages, widgets)
+flutter test test/core/                # Theme and TV sizing helpers
+flutter test test/analysis/            # Kemenag SIHAT comparison harness
 
 # Run specific test file
-flutter test test/repositories/settings_repository_test.dart --reporter=expanded
+flutter test test/data/repositories/settings_repository_impl_test.dart --reporter=expanded
 
 # Run tests with coverage and generate HTML report
 flutter test --coverage
@@ -83,21 +88,31 @@ genhtml coverage/lcov.info -o coverage/html
 
 ```text
 test/
-├── unit/                    # Unit tests for business logic
-│   ├── models/             # Model tests
-│   ├── repositories/       # Repository tests (SQLite)
-│   ├── cubits/            # State management tests
-│   └── services/          # Service layer tests (prayer calculation, etc)
-├── widget/                 # Widget tests for UI components
-├── integration/           # Integration tests
-└── mocks/                # Mock implementations
+├── domain/                    # Domain layer
+│   ├── entities/             # Entity tests
+│   └── usecases/             # Use case tests
+├── data/                      # Data layer
+│   ├── models/                # SQLite row model tests
+│   ├── repositories/          # Repository tests (in-memory SQLite)
+│   └── datasources/           # Data source tests
+├── presentation/              # Presentation layer
+│   ├── cubits/                # State management tests (incl. *_lifecycle_test.dart)
+│   ├── pages/                 # Page + layout widget tests
+│   └── widgets/               # Reusable widget tests
+├── core/                      # Theme, typography, colors, TV safe area
+├── analysis/                  # Scaffold validation against Kemenag SIHAT
+├── preview_test.dart          # Root-level smoke test
+└── widget_test.dart           # Root-level smoke test
 ```
+
+> [!NOTE]
+> Mock implementations live next to the tests that consume them (e.g. `MockSettingsRepository` inside the repository test file) rather than in a shared `test/mocks/` folder. There is no `test/unit/`, `test/widget/`, or `test/integration/` directory.
 
 ### Testing Best Practices
 
 1. **Use --reporter=expanded flag**: Required for detailed debugging information
 2. **Maintain high coverage**: Aim for 90%+ coverage on business logic
-3. **Test all state transitions**: Especially for DisplayStateCubit (5-state machine)
+3. **Test all state transitions**: Especially for DisplayStateCubit (9-state machine)
 4. **Mock SQLite with in-memory DB**: Use proper in-memory database for repository tests
 5. **Validate prayer time accuracy**: Test edge cases for astronomical calculation
 6. **Test timer lifecycle**: Ensure timers are properly disposed to prevent memory leaks
@@ -129,8 +144,8 @@ void main() {
 ### Pre-commit Checklist
 
 ```bash
-# Format code
-dart format .
+# Format code (scoped to lib/ and test/ — `dart format .` crashes on build/ artifacts)
+dart format lib test
 
 # Analyze code for issues
 dart analyze
@@ -150,7 +165,7 @@ flutter build apk --debug
 Before submitting a PR, ensure:
 
 - [ ] All tests pass with --reporter=expanded
-- [ ] Code is properly formatted (dart format .)
+- [ ] Code is properly formatted (dart format lib test)
 - [ ] No analyzer warnings (dart analyze)
 - [ ] Proper error handling implemented
 - [ ] Input validation added where necessary
@@ -165,7 +180,7 @@ Before submitting a PR, ensure:
 ### Session Memory Update
 
 Setiap kali **satu fitur atau fase SDLC selesai dikerjakan**, agent **wajib** menyimpan
-kesimpulan/rekap ke `.github/instructions/memory.instructions.md`. Ini penting karena
+kesimpulan/rekap ke `.agents/instructions/memory.instructions.md`. Ini penting karena
 setiap fase development dimulai di sesi chat baru — tanpa rekap, konteks akan hilang.
 
 **Yang harus dicatat di memory:**
@@ -272,7 +287,7 @@ Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
 
 ```bash
 # On Android TV device, pull the database file
-adb pull /data/data/com.example.miqotul_khoir_tv/databases/miqotul_khoir.db .
+adb pull /data/data/gulajava.mini.miqotul_khoir_tv/databases/miqotul_khoir.db .
 
 # Open with SQLite browser or command line
 sqlite3 miqotul_khoir.db
@@ -371,6 +386,9 @@ flutter devices
 
 ## Continuous Integration
 
+> [!WARNING]
+> **Belum ada pipeline CI yang di-check-in.** Workflow di bawah adalah *rekomendasi*, bukan konfigurasi aktif — repo ini tidak memiliki direktori `.github/` sama sekali. Saat ini seluruh quality gate (§8.2 `check:fast` / `check:task` / `check:full`) dijalankan secara lokal oleh developer atau agent.
+
 ### GitHub Actions Workflow
 
 Basic CI pipeline for automated testing:
@@ -435,7 +453,9 @@ Focus(
 
 ## Related Documentation
 
+- [Architecture Map](ARCHITECTURE.md) - Peta arsitektur kanonik, seams, quality ratchet, dan perintah verifikasi
 - [Architecture Patterns](ARCHITECTURE_PATTERNS.md) - State machine, offline-first, prayer calculation patterns
+- [Domain Glossary](../CONTEXT.md) - Ubiquitous language dan aturan terminologi
 - [Testing Guide](TESTING_GUIDE.md) - Comprehensive testing strategies
 - [UI/UX Guide](UI_UX_GUIDE.md) - Android TV design guidelines and D-Pad navigation
 - [Execution Workflow](EXECUTION_WORKFLOW.md) - Phased execution with checkpoint gates

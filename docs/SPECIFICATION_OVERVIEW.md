@@ -36,6 +36,9 @@ graph TD
 | **SPEC-03** | [`spec-process-prayer-time.md`](../spec/spec-process-prayer-time.md) | `adhan-dart` integration, 7 waktu sholat, Ihtiyat, Hijri conversion | SPEC-01 |
 | **SPEC-04** | [`spec-process-state-machine.md`](../spec/spec-process-state-machine.md) | 5-state transitions, timer management, power recovery | SPEC-01, SPEC-02, SPEC-03 |
 
+> [!WARNING]
+> **SPEC-04 mendeskripsikan model 5-state dan sudah usang.** Implementasi aktual memakai **9 state** (`Standby`, `PreAdzan`, `Adzan`, `Iqomah`, `Sholat`, `SlideshowAnnouncement`, `ImamSchedule`, `WisdomQuote`, `MidnightStandby`) — lihat [`ARCHITECTURE.md`](ARCHITECTURE.md) §3.2 dan `lib/domain/entities/display_state.dart`. Spec ini dibiarkan apa adanya sebagai artefak historis; jangan jadikan acuan implementasi.
+
 ### Application Features
 
 | Spec | File | Scope | Depends On |

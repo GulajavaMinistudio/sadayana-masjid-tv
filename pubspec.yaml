@@ -63,6 +63,15 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  # Desktop SQLite FFI factory, imported by lib/main.dart for the desktop-only
+  # databaseFactory setup.
+  #
+  # MUST stay a dev_dependency: the transitive `sqlite3` package compiles SQLite
+  # from C source via code_assets, so a non-dev dependency makes the Android
+  # release build bundle libsqlite3.so into every APK (+1.65 MB measured,
+  # 41.24 MB -> 42.89 MB) for a code path that never executes on Android TV.
+  # The `depend_on_referenced_packages` info lint on lib/main.dart:11 is the
+  # accepted trade-off — see docs/ARCHITECTURE.md section 8.4.
   sqflite_common_ffi: ^2.4.2+1
   bloc_test: ^10.0.0
   mocktail: ^1.0.5

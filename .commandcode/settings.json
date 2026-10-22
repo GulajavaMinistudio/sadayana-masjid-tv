@@ -6,7 +6,8 @@
       "Shell(findstr /s /n /c:\"/data/\" lib\\presentation\\*.dart lib\\presentation\\*\\*.dart lib\\presentation\\*\\*\\*.dart 2>nul)",
       "Shell(findstr /s /n /c:\"miqotul_khoir_tv/data\" lib\\presentation\\*.dart lib\\presentation\\*\\*.dart lib\\presentation\\*\\*\\*.dart lib\\presentation\\*\\*\\*\\*.dart 2>nul)",
       "Shell(findstr /s /n /c:\"miqotul_khoir_tv/data\" lib\\domain\\*.dart lib\\domain\\*\\*.dart lib\\domain\\*\\*\\*.dart 2>nul)",
-      "Shell(node diagram.js)"
+      "Shell(node diagram.js)",
+      "powershell"
     ],
     "deny": [],
     "defaultMode": "default"
