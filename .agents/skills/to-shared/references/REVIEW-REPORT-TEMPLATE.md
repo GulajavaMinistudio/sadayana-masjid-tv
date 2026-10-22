@@ -4,9 +4,43 @@
 **Specification Ref:** `docs/spec/{slug}-spec.md`  
 **Plan Ref:** `docs/plan/{slug}-plan.md`  
 **Review Status:** **{Approved / Remediation Required}**  
+**Release Readiness Verdict:** **{GO | NO-GO}**  
 
 ---
 <!-- markdownlint-disable-->
+
+## 0. Pre-Review Verification Gates (Mutation Check & Epistemic Doubt)
+
+### 0.1 Verify the Tests First (Mutation Check by Experiment)
+- **Target Mutated Seam:** `[file_path:line]` — `{Brief description of temporary 1-line logic/condition inversion}`
+- **Observed Test Outcome:** `[CAUGHT (Test Failed as Expected) / ESCAPED (False-Green Suite — Blocker!)]`
+- **Isolation / Reversion Confirmed:** `[Yes — Executed in isolated git worktree or static audit; main working tree untouched]`
+
+### 0.2 Adversarial Doubt Cycle & Verification Ledger (Pólya's "Examine Your Guess")
+- **Independent Refutation Audit:** `[EXECUTED / N/A]` — `{Fresh subagent or adversarial pass attempting to disprove candidate findings}`
+- **Candidate Verdict Breakdown:** `[X Confirmed, Y Needs Validation, Z Rejected]`
+- **Tautological / Vacuous Assertions Checked:** `[PASS / FAIL]` — `{Details}`
+- **Unverified Runtime Seams / Happy-Path Bias Checked:** `[PASS / FAIL]` — `{Details}`
+
+### 0.3 5-Move Floor-Guard & Quality Ratchet Diff Audit
+- **Move 1 (Deleted/Weakened Assertions):** `[0 Violations / FAIL]`
+- **Move 2 (Skipped Tests — `.skip`, `xit`, `@Disabled`):** `[0 Violations / FAIL]`
+- **Move 3 (Unapproved Linter/Type Suppressions):** `[0 Violations / Approved in ARCHITECTURE.md §8.4 / FAIL]`
+- **Move 4 (Loosened Compiler/Linter Configs):** `[0 Violations / FAIL]`
+- **Move 5 (Lowered Quality Ratchets — Coverage, Bundle, CWV, Complexity):** `[0 Violations / Ratchets Ratcheted Up / FAIL]`
+- **Verification Scope Executed:** `[check:full / Scoped Suite: X/Y tests passed, 0 warnings / GATE_ONLY]`
+
+### 0.4 Runtime Evidence Ledger & AC Surface Conformance
+*Anti-Fabrication Rule: No evidence = No `MET ✅`. Static file reading never counts as runtime execution. Unapplied DB migrations on disk must be marked `SPECCED BUT NOT APPLIED ⚠️`.*
+- **Trust Boundary Transitions Crossed:** `[e.g., Unauthenticated Public HTTP ➔ Order Service ➔ PostgreSQL]`
+- **Prior Run Iteration Status:** `[Initial Audit / Re-Audit (Carried Forward: X, Revalidated: Y)]`
+
+| AC / Surface ID | Target Surface (Route / Component / Migration / CLI) | Conformance Status (`MET ✅` \| `SPECCED BUT MISSING 🚫` \| `SPECCED BUT NOT APPLIED ⚠️` \| `BLOCKED ⚠️`) | Concrete Execution Evidence (Command, HTTP Status, DB Check, or Blocker Reason) |
+| :--- | :--- | :---: | :--- |
+| `AC-001` | `[e.g., POST /api/v1/orders]` | `MET ✅` | `[e.g., vitest order.test.ts (4 passed) + 201 Created smoke check]` |
+| `AC-002` | `[e.g., 0004_add_orders_idx.sql]` | `MET ✅` | `[e.g., Migration applied to local DB; \d orders confirmed index]` |
+
+---
 
 ## 1. Uncle Bob's 5 SOLID Principles Audit
 
@@ -60,32 +94,78 @@
 - **Small Functions:** Are functions concise, focused on one thing, and operating at a single level of abstraction?
 - **Boy Scout Rule:** Was the code left cleaner than it was found?
 - **Architectural Pragmatism & Scope Check:** Verified that architectural ceremony fits the problem scale (zero forced 4-layer over-engineering on single-file scripts/CLI tools; strict Clean Architecture preserved on core business domain modules).
-- **Zero Suppression Anti-Cheat:** Verified zero `@ts-ignore`, `eslint-disable`, `# noqa`, or skipped tests.
+- **Zero Suppression Anti-Cheat:** Verified zero unapproved `@ts-ignore`, `eslint-disable`, `# noqa`, or skipped tests.
 
 ---
 
 ## 4. Defensive Security & Invariant Audit
 
-| Security Vector | Assessment & Verification Criteria | Status | Notes / Findings |
+| Security Vector | Assessment & Verification Criteria | Status (`PASS` \| `CONFIRMED` \| `NEEDS_VALIDATION` \| `N/A`) | Notes / Findings & Verification Recipes |
 | :--- | :--- | :---: | :--- |
-| **Injection & Sanitization** | SQL/NoSQL queries parameterized; shell/HTML outputs sanitized at boundary adapters | [PASS / FAIL] | {Details} |
-| **Authentication & Authorization** | BOLA/IDOR prevented; RBAC/tenant isolation enforced on every mutating use case | [PASS / FAIL] | {Details} |
-| **Zero Secret Exposure** | Zero hardcoded API keys, JWT secrets, passwords, or private certificates in code/tests | [PASS / FAIL] | {Details} |
-| **Payload & Deserialization Guard** | Mass assignment prohibited; payload size bounded; safe deserialization enforced | [PASS / FAIL] | {Details} |
-| **DoS & Resource Exhaustion** | Rate limits, pagination caps, and timeout cancellation guards present on all I/O | [PASS / FAIL] | {Details} |
+| **Injection & Second-Order Sinks** | SQL/NoSQL queries parameterized; shell/HTML outputs sanitized; data stored safely does not become dangerous in downstream sinks (regex, paths, shell args) | [PASS / CONFIRMED / NEEDS_VALIDATION] | {Details} |
+| **Tenant & Data Isolation Lifecycle** | Row-level/query-level filtering enforced on every read/write; cache keys & object paths tenant-namespaced; derived copies (indexes/caches/exports) follow ACL updates | [PASS / CONFIRMED / NEEDS_VALIDATION] | {Details} |
+| **Auth & Access Control (BOLA/IDOR)** | BOLA/IDOR prevented; RBAC/ABAC enforced per mutating use case; authority cannot expand during restore/export | [PASS / CONFIRMED / NEEDS_VALIDATION] | {Details} |
+| **AI, LLM & MCP Agentic Boundaries** | Code-level authorization enforced (never rely on prompt guardrails); tool arguments validated; action-binding & confused-deputy guards present; persistent memory poisoning prevented | [PASS / CONFIRMED / NEEDS_VALIDATION / N/A] | {Details} |
+| **DoS, Amplification & Cancellation** | Computational amplification guarded (ReDoS, $O(n^2)$ parsing); pre-auth work bounded; client cancellation (`AbortSignal`) propagated downstream | [PASS / CONFIRMED / NEEDS_VALIDATION] | {Details} |
+| **SSRF & Outbound URL Guards** | Outbound URLs allowlist `https:`, resolve all DNS records, reject non-unicast/loopback/cloud metadata IPs (`169.254.169.254`), and forbid redirects | [PASS / CONFIRMED / NEEDS_VALIDATION / N/A] | {Details} |
+| **Web & Identity Boundaries** | JWT algorithm confusion prevented & claims verified; OAuth state/redirects validated; CORS origin reflection rejected; auth cookies `HttpOnly`/`Secure` | [PASS / CONFIRMED / NEEDS_VALIDATION / N/A] | {Details} |
+| **Client-Side Sinks & DOM** | Zero unescaped `innerHTML`/`javascript:` sinks; prototype pollution rejected in deep merges; `postMessage` origin allowlisted; tokens omitted from `localStorage` | [PASS / CONFIRMED / NEEDS_VALIDATION / N/A] | {Details} |
+| **Destructive File/Path Guards** | File deletions/writes resolve `realpath`, enforce non-empty root prefix, and reject `..` traversal | [PASS / CONFIRMED / NEEDS_VALIDATION / N/A] | {Details} |
+| **Zero Secret Exposure & Git Hygiene** | Zero hardcoded API keys, JWT secrets, passwords in code/tests; git history audited for committed/reverted secrets | [PASS / CONFIRMED / NEEDS_VALIDATION] | {Details} |
+| **CI/CD, Supply-Chain & Provenance** | Dependencies pinned in lockfile; `--ignore-scripts` enforced; CI workflow expression injection prevented; actions pinned by commit SHA | [PASS / CONFIRMED / NEEDS_VALIDATION] | {Details} |
+| **Desktop, Mobile & Local-IPC** | Deep links bind to session nonces; webview native bridges origin-allowlisted; local IPC (sockets, Android exported components) scoped | [PASS / CONFIRMED / NEEDS_VALIDATION / N/A] | {Details} |
+| **Async Queues, Webhooks & Idempotency** | Idempotency keys enforced on side-effecting workers; webhook HMAC signatures & timestamp skew ($\le 5\text{m}$) verified; envelope vs body alignment | [PASS / CONFIRMED / NEEDS_VALIDATION / N/A] | {Details} |
+| **Cloud Config & Workload Secret Containment** | Deployment overlays do not disable auth/TLS; secrets not exposed in CLI args (`ps aux`) or build artifacts; instance metadata blocked | [PASS / CONFIRMED / NEEDS_VALIDATION / N/A] | {Details} |
+| **Binary, Memory & FFI Safety** | Bounds checks, pointer arithmetic, null termination, and concurrency/race-condition guards verified (when native/FFI code exists) | [PASS / CONFIRMED / NEEDS_VALIDATION / N/A] | {Details} |
+| **Wildcard & Code Debt Smells** | UI vs API asymmetry checked; weird subsystem feature combinations verified; `temp`/`hack`/`TODO` comments checked | [PASS / CONFIRMED / NEEDS_VALIDATION] | {Details} |
 
 ---
 
-## 5. Remediation Action Items
+## 5. Database, Caching & Performance Audit (Keep-or-Revert Gate)
 
-*Required surgical adjustments before declaring implementation complete:*
-
-1. `[file_path:line]` - [Specific refactoring required]
-2. `[file_path:line]` - [Missing boundary test to add]
+- **Query & Index Verification (`EXPLAIN ANALYZE`):** `[Verified / N/A]` — `{Zero N+1 loops, unbounded scans, or missing composite indexes}`
+- **Cache Invalidation & Stampede Protection:** `[Verified / N/A]` — `{Explicit TTL, deterministic invalidation on write, single-flight/jitter protection}`
+- **Performance Attempt Ledger (Keep-or-Revert Rule):** `[Verified / N/A]` — `{Any complexity-adding optimization includes before/after benchmark evidence; unverified micro-optimizations reverted}`
 
 ---
 
-## 6. Pólya's Two Golden Questions (Looking Back & Knowledge Promotion)
+## 6. Remediation Action Items
+
+*Required surgical adjustments before declaring implementation complete. Apply standardized Lean Action Tags:*
+
+| Action Tag | Trigger Condition | Remediation Guideline |
+| :--- | :--- | :--- |
+| `delete:` | Dead code, speculative features, unused wrappers | Delete immediately. Best code is no code. |
+| `reuse:` | Re-invented helper or wheel | Replace with existing house domain helper or utility. |
+| `stdlib:` | Hand-rolled logic available in standard library | Replace with built-in standard library methods. |
+| `native:` | Complex one-off wrapper around native platform API (excluding project design-system / house components) | Reuse project house component first; otherwise use standard platform widget/API directly. |
+| `yagni:` | Speculative flexibility, unused config parameters | Strip unused options/parameters down to current requirement. |
+| `shrink:` | Over-engineered, over-nested algorithm | Flatten and simplify to straightforward linear logic. |
+| `merge:` | Duplicated logic across multiple near-identical functions | Consolidate into a single parameterized function. |
+| `split:` | Single function handling multiple distinct responsibilities | Extract helper for SRP at natural cohesion seam. |
+
+### Findings (Standardized 4-Part Structure + Security Trace)
+
+*For general code quality findings:*
+1. **`[file_path:line]` - `[action_tag]` [Brief Title]**
+   - **What this is:** [Exact construct, e.g., custom date formatter function]
+   - **Problem:** [Hand-rolled date formatting duplicating stdlib Intl.DateTimeFormat]
+   - **Fix:** [`stdlib:` Replace with native Intl.DateTimeFormat]
+   - **If we skip it:** [Maintenance overhead, potential timezone edge case bugs]
+
+*For security & boundary integrity findings (Section 4):*
+2. **`[file_path:line]` - `[CONFIRMED | NEEDS_VALIDATION]` [Security Finding Title]**
+   - **Root-Cause Fingerprint:** `[seam:file:line:slug]`
+   - **Severity / CWE:** `[CRITICAL | HIGH | MEDIUM | LOW]` (e.g., `CWE-89` / `CWE-79` / `CWE-862` / `CWE-918`)
+   - **What this is:** [Exact file, line range, and vulnerable construct]
+   - **Source Trace:** `[Entrypoint]` $\to$ `[Propagation / Handler]` $\to$ `[Dangerous Sink / Broken Invariant]`
+   - **Actor & Impact:** [Attacker privilege level] $\to$ [Affected principal] $\to$ [Capability / data exposed]
+   - **Smallest Effective Fix:** [Minimal surgical fix using stdlib or house components; avoid speculative security wrapper layers]
+   - **Validation Plan / Blocker (if `NEEDS_VALIDATION`):** [Exact missing deployment/IAM/infra fact and owner-executable verification command]
+
+---
+
+## 7. Pólya's Two Golden Questions (Looking Back & Knowledge Promotion)
 
 *Pólya Heuristic: Can you use the result? Can you use the method? (Pólya, 1945, p. 61)*
 
@@ -97,7 +177,7 @@
 
 ---
 
-## 7. Can You See It at a Glance? (Holistic Perception - Pólya, p. 59–61)
+## 8. Can You See It at a Glance? (Holistic Perception - Pólya, p. 59–61)
 
 *Pólya Heuristic: Can you see the whole solution at a glance? Compress the implementation into a 30-second mental model.*
 
@@ -116,3 +196,24 @@
 
 - **At-a-Glance Summary:** [1-2 sentences capturing the entire data flow and primary invariant]
 - **Visual Diagram Validated:** [Yes / No - Can a new developer understand the topology without reading the full diff?]
+
+---
+
+## 9. Lean Scoreboard, Transparency & Release Readiness Gate
+
+### 9.1 Lean Scoreboard
+- **Lines Deleted:** [count or 0]
+- **Helpers Reused:** [count or 0]
+- **Net Diff Impact:** [-X lines / +Y lines]
+
+### 9.2 Scope Limitations & Transparency
+- **Not checked:** [Unverified environments, scale thresholds, or edge cases outside current scope]
+- **Residual Risks / Upgrade Triggers:** [Known capacity ceilings, deliberate shortcuts, or future upgrade milestones]
+
+### 9.3 Release & Launch Readiness Gate (`GO | NO-GO`)
+- **Release Decision:** **`{GO | NO-GO}`**
+- **Backward Compatibility & Migration Safety:** `[Verified Expand-Migrate-Contract / N/A]`
+- **Timed Rollback Plan (`< 15 Minutes`):**
+  1. **Revert Trigger:** `{Exact error rate, latency spike, or healthcheck failure that triggers rollback}`
+  2. **Rollback Command / Action:** `{git revert <sha> / feature-flag toggle / reversible migration step}`
+  3. **Post-Rollback Verification:** `{Smoke check confirming system recovery}`
