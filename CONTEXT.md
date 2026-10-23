@@ -18,6 +18,10 @@ _Avoid_: Iqamah, Iqama
 The countdown window shortly before a prayer time, used to highlight the upcoming prayer.
 _Avoid_: pre-adhan
 
+**Sholat**:
+The congregational prayer phase the signage commits to, shown as a darkened silent screen.
+_Avoid_: salat, salat prayer
+
 **Ihtiyat**:
 A conservative safety margin (default +2 minutes) applied to calculated prayer times so worship begins after the astronomical event.
 _Avoid_: time correction, offset

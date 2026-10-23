@@ -783,7 +783,7 @@ To prevent infinite loops during the Draft ➔ Audit ➔ Update cycle, all speci
 
 - **Active Memory Path:** `.agents/instructions/memory.instructions.md`
 - **Managed by:** `/to-memory` skill
-- **Last Recorded:** 2026-09-09
+- **Last Recorded:** 2026-10-23
 
 ---
 

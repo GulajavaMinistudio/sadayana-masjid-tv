@@ -1,183 +1,118 @@
 # Project Memory Log
 
-> This file is managed by the `memory-manager` skill.
+> Active Location: `.agents/instructions/memory.instructions.md`
+> This file is managed by the `to-memory` skill.
 > It persists context across AI chat sessions to prevent knowledge loss.
 > Do NOT manually edit this file unless necessary.
 
 ---
 
-## 📝 Session Checkpoint: 2026-06-03
+## 🧠 Knowledge Base
 
-- **Current SDLC Phase:** Infrastructure / SDLC Tooling Setup (Pre-Development)
-- **Active Artifacts:**
-  - `AGENTS.md` — Status: ✅ Finalized (Updated with paired Skills mapping)
-  - `.opencode/agents/*.md` — Status: ✅ Finalized (All 9 agents refactored to lean persona shells)
-  - `.opencode/skills/*/SKILL.md` — Status: ✅ Finalized (All 10 skills created)
-- **Achieved Milestones:**
-  - Analyzed user's custom SDLC workflow against GitHub Spec Kit; identified and closed gaps (added Clarification and Consistency Check phases)
-  - Created 2 new agents: `ClarificationAnalyst.md` and `ArtifactConsistencyChecker.md`
-  - Implemented full Separation of Concerns architecture: Agent (Persona/Rules) ↔ Skill (Workflow/Template) for all 9 agents
-  - Created 10 skill files total:
-    - `product-manager-prd/SKILL.md`
-    - `clarification-analyst/SKILL.md`
-    - `specification-architect/SKILL.md`
-    - `artifact-consistency-checker/SKILL.md`
-    - `planner-architect/SKILL.md`
-    - `karpathy-guidelines/SKILL.md` (Updated to associate with `@GodModeDev`)
-    - `expert-code-reviewer/SKILL.md`
-    - `bug-remediation-architect/SKILL.md`
-    - `diataxis-documentation-architect/SKILL.md`
-    - `memory-manager/SKILL.md`
-  - Updated `AGENTS.md` Custom Agents Usage section to list paired Skill names for every agent
-  - Updated `AGENTS.md` PROGRESS MEMORY TRACKING rule to delegate to `memory-manager` skill
-  - Adopted hybrid memory template inspired by Cline Memory Bank and Claude Session Handoff
-  - **Ecosystem Synchronization**: Cloned and adapted all Agents, Skills, and Instructions for native support in Google Antigravity (`.agents/`) and GitHub Copilot (`.github/`).
-  - Generated GitHub Copilot-specific `.agent.md` files with YAML frontmatter.
-- **Dead-Ends (Do NOT Repeat):**
-  - None encountered in this session.
-- **Updated Files:**
-  - `.opencode/agents/*.md` & `.opencode/skills/*/SKILL.md`
-  - `.agents/rules/*.md` (Antigravity Agent Personas)
-  - `.agents/skills/*/SKILL.md` (Antigravity Skills)
-  - `.agents/instructions/*.md` (Antigravity Global Rules)
-  - `.github/agents/*.agent.md` (Copilot Agent Personas)
-  - `.github/skills/*/SKILL.md` (Copilot Skills)
-  - `.github/instructions/*.md` & `.github/copilot-instructions.md` (Copilot Global Rules)
-  - `AGENTS.md` (Universal rules)
-- **Decisions Made:**
-  - Architecture: Agent files are "Persona", Skill files are "Procedure"
-  - Ecosystem scaling: `.opencode/` acts as the Master Source of Truth, which is mirrored/adapted into `.agents/` and `.github/` to ensure native compatibility across VS Code (Copilot), OpenCode, and Antigravity IDE.
-- **Next Action / Pending:**
-  - Begin actual product development using the newly established SDLC pipeline (start with PRD phase using `@ProductManagerPRD`)
-  - Optionally save this checkpoint to version control (`git commit`)
+> This section accumulates cross-session knowledge that must survive compaction.
+> Do NOT delete entries here.
+> **Compacted 2026-10-23:** checkpoints from 2026-06-03 → 2026-10-22 (6 sessions) removed after promotion; their durable findings now live below. Retained: the two most recent 2026-10-23 checkpoints.
 
-<!-- checkpoint-tail: Completed full Separation of Concerns refactoring for all 9 SDLC agents + 10 paired skills. Synchronized the entire architecture into .agents/ (Antigravity) and .github/ (Copilot) for cross-platform compatibility. Ready to begin actual product development (PRD Phase). -->
+### Architecture & Patterns
 
----
+- **Flutter-native version identity (no plugin required):** Flutter ≥ 3.41 ships `appBuildName` / `appBuildNumber` as public constants exported from `package:flutter/services.dart` (`flutter/lib/src/services/app_version.dart`). The Flutter tool injects `FLUTTER_BUILD_NAME` / `FLUTTER_BUILD_NUMBER` as compile-time dart-defines from `pubspec.yaml`'s `version:` field (`flutter_tools/lib/src/runner/flutter_command.dart:1506-1514` → `build_info.dart:364`). The value is baked into the compiled AOT binary, so it always describes the running code. Use this instead of `package_info_plus` for any in-app version display — zero new dependency, zero AGP change, synchronous `const`, trivially assertable in tests. `flutter test` injects the same define (`flutter_tools/lib/src/commands/test.dart:433`). [Source: Session 2026-10-22]
+- **`appBuildName` / `appBuildNumber` are genuinely `null` when the define is absent:** the SDK accessor is `bool.hasEnvironment('FLUTTER_BUILD_NAME') ? String.fromEnvironment(...) : null` (`app_version.dart:17-19, 29-31`). Consequence: a null-manifest branch **cannot be instantiated** by any `flutter test` invocation (the guard is constant-folded), and `--dart-define=FLUTTER_BUILD_NAME=` yields the *empty string*, not `null`. [Verified 2026-10-23]
+- **Prove an uninstantiable branch by exhaustion, not by mocking:** when an input state cannot exist in the test environment, assert that the output is a member of the *only two* possible values — e.g. `displayName ∈ {buildName, unavailable}` — plus the properties of the fallback (non-empty, non-numeric). This covers both branches without fabricating either, and a re-introduced hardcoded fallback fails immediately. A mocked source would test the mock, not the build. [Source: Session 2026-10-23]
+- **Guard tests must use an EXTERNAL oracle:** when asserting that a value matches its source of truth, parse the source file from disk — never compare two app-internal constants. Comparing `AppVersion.buildName` to `appBuildName` is self-referential and would still pass if the toolchain stopped injecting the define (both sides become `null`). The `pubspec.yaml`-parsing pattern is the correct external oracle. [Source: Session 2026-10-22]
+- **A quality gate must be MEASURED before it is written into a plan:** a gate that is red by construction manufactures Floor-Guard pressure — the implementer's only escapes are widening scope, lowering a floor, or adding a suppression, and all three are forbidden. Bind the exact command, run it at baseline, and record the number. [Source: Session 2026-10-23]
+- **Analyzer gate scope is part of the gate:** `dart analyze` (whole package) reports **1 warning** from `tools/replace_opacity.dart` and exits 2; `dart analyze lib test` reports **0 warnings / 4 infos** and exits 0. Bind `dart analyze lib test` whenever the acceptance criterion is scoped to `lib`/`test`. [Measured 2026-10-23]
+- **`dart format --set-exit-if-changed` is not a boolean gate on this repo:** it exits 1 at baseline because 15 pre-existing files are unformatted. The gate must **count the `Changed` lines** and compare against the measured baseline, plus assert the change-set files are absent from the list. [Measured 2026-10-23]
+- **Markdown tables break on raw pipes, and the workaround breaks Dart:** a `|` inside a code span still splits a GFM cell, while escaping it as `\|` inside a Dart raw string becomes a literal-escape bug when copied. Express alternations as **two separate patterns** instead of one `a | b` alternation. [Source: Session 2026-10-23]
+- **Version drift's root cause is an unenforced duplicate source of truth:** a version restated in N places diverges; this project shipped six consecutive releases (`1.2.4+7` → `1.4.4+15`) without updating the About literal (`1.2.2`/`5`). Fix the *structure* (single seam bound to the build) and add a guard; do not fix the literal. [Source: Session 2026-10-22]
+- **Cubit async-lifecycle guard convention:** Every `await` inside a Cubit method must be followed by `if (isClosed) return;` before any `emit()`. Prevents the fatal `Bad state: Cannot emit new states after calling close`. 29 guards across 5 cubits; `PrayerTimeCubit` is the gold-standard reference. [Source: Session 2026-06-20]
+- **Layer purity invariants (verified, must not regress):** `lib/domain/` imports only pure Dart (`equatable`, `intl`, `adhan`, `hijri`) — zero Flutter/SQLite/Firebase; `lib/presentation/` must not import `lib/data/`; `lib/data/` must not import `lib/presentation/`; `lib/core/` imports no other layer. [Source: Session 2026-10-15]
+- **Documentation authority order:** `docs/ARCHITECTURE.md` is the canonical topology source; `CONTEXT.md` is the canonical ubiquitous-language glossary (**20 terms** as of 2026-10-23, strict `_Avoid_` synonyms — `Sholat` was added that day); `docs/adr/` holds irreversible decisions (`0001-kemenag-sihat-prayer-times`, `0002-pure-dart-astronomy-in-domain`). `docs/ARCHITECTURE_PATTERNS.md` is a pattern guide whose legacy samples are explicitly flagged illustrative. `spec/`, `plan/`, and `Product_Requirement_Document.md` predate several features — the code is the source of truth for runtime behavior. [Source: Session 2026-10-15, count corrected 2026-10-23]
+- **Dart string constants are observable in the compiled AOT artifact:** `String.fromEnvironment` values and ordinary string literals are inlined into the Dart snapshot, so they are byte-searchable in the release `libapp.so`. The **uncompressed** AOT library is already in the build tree at `build/app/intermediates/stripped_native_libs/release/stripReleaseDebugSymbols/out/lib/<abi>/libapp.so` — no APK unzip required — so an artifact-level assertion can be written with `dart:io` alone and **zero new dependencies**. [Source: Session 2026-10-23]
+- **Anti-regression guards should assert on the ABSENCE of members, not on a literal-shape regex:** a `<digits>.<digits>.<digits>` pattern matches a version but **cannot** match a bare build number, so it silently misses half of a coupled-literal defect. Asserting "no file declares a `version` / `buildNumber` display constant, and every marker-bearing surface imports the canonical holder" is strictly stronger and immune to the "is `'15'` a version or a build number?" ambiguity. [Source: Session 2026-10-23]
+- **Recurring drift mode — "the table was updated, the prose qualifying it was not":** observed **five** times (seam count vs. table, assumption verification text vs. criterion, constraint precision vs. acceptance criterion, lead sentence counting rows beneath it, and change-set arithmetic "2 created, 3 modified" vs. a 3+2 reality). The remedy is a **re-audit pass that diffs prose against tables**, not a checklist review. [Source: Session 2026-10-23]
+- **Adding a glossary term shifts every subsequent line citation:** inserting a term into `CONTEXT.md` moves every entry below it, silently invalidating the `CONTEXT.md:NN` anchors of every dependent document. After any glossary amendment, **re-resolve every anchor against the live file**. [Source: Session 2026-10-23]
+- **Agent/Skill separation of powers (SDLC toolkit):** agent files are *personas*, skill files are *procedures*; `.opencode/` was the original master, mirrored into `.agents/` (Antigravity) and `.github/` (Copilot). Phases are session-locked: an Auditor records findings and hands remediation to the authoring phase — it never edits the artifact it audits. [Source: Session 2026-06-03]
 
-## 📝 Session Checkpoint: 2026-06-20
+### Dead-Ends (Do NOT Repeat)
 
-- **Current SDLC Phase:** Planning / Bug Remediation
-- **Active Artifacts:**
-  - `plan/bug-fix-20260620-imam-schedule-emit-after-close.md` — Status: ⏳ Pending (Approved to execute Phase 1)
-- **Achieved Milestones:**
-  - Investigated fatal crash `Bad state: Cannot emit new states after calling close` originating from `ImamScheduleCubit`.
-  - Conducted global codebase audit and identified Async-Lifecycle Race Condition in 4 other cubits: `SettingsCubit`, `SetupWizardCubit`, `SlideshowSectionCubit`, and `DisplayStateCubit`.
-  - Created and updated the Implementation Plan (v1.1) for a global architectural fix to add `isClosed` guards.
-  - Received user approval to proceed with Phase 1 (Test Writing).
-- **Dead-Ends (Do NOT Repeat):**
-  - None
-- **Updated Files:**
-  - `plan/bug-fix-20260620-imam-schedule-emit-after-close.md` — Created and finalized plan.
-- **Decisions Made:**
-  - Decided on a global refactoring approach rather than an isolated fix, ensuring all async cubits are protected against lifecycle dismounts.
-- **Next Action / Pending:**
-  - Start executing Phase 1: Write lifecycle tests for the 5 vulnerable cubits (`imam_schedule`, `settings`, `setup_wizard`, `slideshow_section`, `display_state`) using `@GodModeDev`.
+| # | Attempted | Why It Failed | Correct Solution |
+|---|-----------|---------------|------------------|
+| 1 | Adding `package_info_plus` to read the installed app version at runtime | Requires Android Gradle Plugin ≥ 8.12.1; the project is on AGP 8.11.1. It would force an AGP + Gradle + Kotlin toolchain upgrade (an XL change) to obtain runtime truth that a static read-only string does not need. Also adds APK bytes against the 41.24 MB ratchet floor. | Use Flutter's built-in `appBuildName` / `appBuildNumber` from `package:flutter/services.dart` — same outcome, zero dependency, zero toolchain change. |
+| 2 | `dart format .` at the repository root | Crashes with `PathNotFoundException` while walking `build/` (Flutter plugin transform artifacts). | Always scope to `dart format lib test`. |
+| 3 | `rm` / `tail` piped commands in the shell tool on Windows | The Windows shell wrapper does not provide these Unix utilities; `rm` fails with "not recognized as an internal or external command". Also: a `;` inside a `dart` invocation is parsed as a *command name* ("Could not find a command named `analyze;`"). | Use the PowerShell tool with `Remove-Item` / `Select-Object`; issue one command per invocation. |
+| 4 | Treating the About page's "5 mode tampilan otomatis" claim as an intentional marketing simplification | It contradicted `CONTEXT.md` ("one of the **nine** automatic screen modes") and `docs/ARCHITECTURE.md` ("9-state automatic display machine"). The four extra states are fully reachable via user-facing settings toggles — not dead enum members. | Always validate user-facing copy against `CONTEXT.md` and the enum, not against assumption. |
+| 5 | Verifying that a release/AOT build carries the manifest version by running `flutter build apk --debug` | `--debug` produces a **JIT** artifact (kernel snapshot), **not** an AOT build — the release path that actually ships was never observed. | Separate the claim: prove the injection is build-mode-agnostic by source inspection of `flutter_command.dart`; prove the artifact's value by byte-searching the **release** `libapp.so`. Never let a debug result stand in for an AOT one. |
+| 6 | Guarding a version invariant by asserting one hard-coded filename imports the seam | True by construction and never examines a new surface — a tautology, not a guard. The exact regression it exists to catch (a second version-displaying surface using a literal) would pass silently. | Marker-based scan: strip comments, match the rendered markers (`RegExp(r'Versi ')` / `RegExp(r'Build ')`), require the seam import; plus an absence scan for `version`/`buildNumber` display members. Add the known consumer as a second layer only — a closed allowlist is brittle. |
+| 7 | Binding a whole-package `dart analyze` and a `--set-exit-if-changed` formatter run as boolean gates | Both are red at baseline (1 pre-existing warning; 15 unformatted files, exit 1). A permanently red gate invites the three forbidden escapes: widen scope, lower a floor, add a suppression. | Measure first, then bind: `dart analyze lib test` (0 warnings / 4 infos) and count `Changed` lines of `dart format --output=none --set-exit-if-changed lib test` against the measured baseline. |
 
-<!-- checkpoint-tail: Completed root cause analysis for emit-after-close fatal crash. Audited all cubits and identified 5 vulnerable cubits. Created and received approval for a Global Fix Implementation Plan. Ready to execute Phase 1 (Test Writing). -->
+### Key Metrics & Baselines
+
+- **Passing tests:** `535 / 535` across 59 test files — `flutter test --reporter=expanded`, ≈ 26 s. [Measured 2026-10-22]
+- **Analyzer findings:** whole-package `dart analyze` = 0 errors / **1 warning** / 4 infos (exit 2; the warning is `tools/replace_opacity.dart`). Scoped `dart analyze lib test` = **0 errors / 0 warnings / 4 infos** (exit 0). Floors: warnings `≤ 1`, infos `≤ 4`. [Measured 2026-10-23]
+- **Unformatted Dart files:** `15` (`lib` + `test`) via `dart format --output=none --set-exit-if-changed lib test`. Supersedes the previously recorded `16`. [Measured 2026-10-23]
+- **Release APK size:** `41.24 MB` (43,240,043 bytes), arm64, unminified (`isMinifyEnabled = false`). Ratchet floor — must not grow. [Measured 2026-10-22]
+- **Database schema:** v11, 5 tables, sequential `if (oldVersion < N)` migrations. [Verified 2026-10-15]
+- **City dataset:** 514 cities across 34 provinces (`assets/data/cities.json`). [Verified 2026-10-22]
+- **Display State model:** 9 sealed states with deterministic priority — prayer cycle (Pre-Adzan → Adzan → Iqomah → Sholat) → Midnight Standby → Slideshow Announcement → Imam Schedule → Wisdom Quote → Standby (fallback), on a 1 s tick. [Verified 2026-10-22]
+- **Domain glossary:** `CONTEXT.md` holds **20 terms** across 3 groups (19 + `Sholat`, added 2026-10-23). [Verified 2026-10-23]
+- **Flutter / Dart:** Flutter 3.47.6 stable, Dart 3.13.5, SDK constraint `^3.11.0`. [Verified 2026-10-22]
+- **Android toolchain floor:** AGP 8.11.1, Gradle 8.14, Kotlin 2.2.20, minSdk 24, `compileSdk`/`targetSdk` 37. Flutter 3.47.6 template ships AGP 9.1.0 / Gradle 9.3.1 / Kotlin 2.4.0 — the project trails the template and emits three "will soon be dropped" warnings. `compileSdk 37` is unsupported by AGP 8.11.1 (caps at API 36); the build still succeeds. [Verified 2026-10-22]
 
 ---
 
-## 📝 Session Checkpoint: 2026-06-20 (Bug Fix — Phase 1 & 2 Completed)
-
-- **Current SDLC Phase:** Bug Remediation — ✅ COMPLETED
-- **Active Artifacts:**
-  - `plan/bug-fix-20260620-imam-schedule-emit-after-close.md` — Status: ✅ Finalized (v1.2)
-- **Achieved Milestones:**
-  - **Phase 1 (Test Writing):** Berhasil menulis 5 lifecycle test files (17 test cases) yang mereproduksi bug `emit-after-close` di semua cubit yang rentan. Hasil: 15 FAIL / 2 PASS (membuktikan bug terbukti direproduksi).
-  - **Phase 2 (Remediation):** Berhasil menambahkan `if (isClosed) return;` guard ke 5 cubit. Total 29 guard ditambahkan.
-  - **Lifecycle Test Verification (TASK-016):** 17/17 test PASS.
-  - **Full Regression Test (TASK-017):** 535/535 test PASS — tidak ada regresi.
-  - **Plan Document:** Diperbarui ke v1.2 dengan status semua task dan hasil aktual.
-- **Dead-Ends (Do NOT Repeat):**
-  - None
-- **Updated Files (Production Code):**
-  - `lib/presentation/cubits/imam_schedule/imam_schedule_cubit.dart` — 8 guards ditambahkan
-  - `lib/presentation/cubits/settings/settings_cubit.dart` — 7 guards ditambahkan
-  - `lib/presentation/cubits/setup_wizard/setup_wizard_cubit.dart` — 2 guards ditambahkan
-  - `lib/presentation/cubits/slideshow_section/slideshow_section_cubit.dart` — 11 guards ditambahkan
-  - `lib/presentation/cubits/display_state/display_state_cubit.dart` — 1 guard di `_tick()`
-- **Updated Files (Tests):**
-  - `test/presentation/cubits/imam_schedule/imam_schedule_cubit_lifecycle_test.dart` — NEW (7 test)
-  - `test/presentation/cubits/settings/settings_cubit_lifecycle_test.dart` — NEW (4 test)
-  - `test/presentation/cubits/setup_wizard/setup_wizard_cubit_lifecycle_test.dart` — NEW (2 test)
-  - `test/presentation/cubits/slideshow_section/slideshow_section_cubit_lifecycle_test.dart` — NEW (2 test)
-  - `test/presentation/cubits/display_state/display_state_cubit_lifecycle_test.dart` — NEW (2 test)
-- **Updated Files (Docs):**
-  - `plan/bug-fix-20260620-imam-schedule-emit-after-close.md` — v1.2 (all tasks marked complete)
-- **Decisions Made:**
-  - Pola standar `if (isClosed) return;` sebelum `emit()` post-await ditetapkan sebagai konvensi arsitektural project untuk semua Cubit di masa mendatang.
-  - Referensi pola: `PrayerTimeCubit` (sudah implementasi sejak awal dan menjadi gold standard).
-- **Next Action / Pending:**
-  - Siap untuk `git commit` dengan pesan deskriptif.
-  - Pertimbangkan membuat aturan lint atau code snippet untuk mengingatkan developer agar selalu menambahkan guard saat menulis method async baru di Cubit.
-  - Lanjutkan ke fitur berikutnya sesuai roadmap (Plan 13+).
-
-<!-- checkpoint-tail: Bug fix emit-after-close SELESAI PENUH. Phase 1 (17 lifecycle tests) + Phase 2 (29 isClosed guards di 5 cubit). Full test suite 535/535 PASS. Tidak ada regresi. Plan v1.2 difinalisasi. Siap commit dan lanjut ke fitur berikutnya. -->
-
----
-
-## 📝 Session Checkpoint: 2026-10-15
+## 📝 Session Checkpoint: 2026-10-23 (Version-Drift Spec — 3 Clarification Iterations, Readiness 100/100)
 
 - **Active Memory Path:** `.agents/instructions/memory.instructions.md`
-- **Current SDLC Phase:** Utility: Architecture Mapping (`/to-map`) — ✅ Completed
+- **Current SDLC Phase:** Phase 1 (Specification) — ✅ Complete and verified.
 - **Active Artifacts:**
-  - `docs/ARCHITECTURE.md` — Status: ✅ Finalized (canonical architecture map: topology diagram, 9-state machine, seams, 9 invariants, directory matrix, hotspots)
+  - `docs/discovery/about-page-version-drift-discovery.md` — Status: ✅ Finalized (280 lines, upstream)
+  - `docs/spec/about-page-version-drift-spec.md` — Status: ✅ **v1.2.0** (722 lines) — 7 REQ · 9 CON · **14 AC**. Readiness Score **100/100** (Completeness 40 · Clarity 30 · Alignment 30 · Critical Flaw Veto: none), verified by three independent clarification iterations.
+  - `docs/audit/about-page-version-drift-spec-clarification.md` — Status: ✅ Finalized (535 lines) — Iterations 1 (79), 2 (91), 3 (100, post-remediation verification)
+  - `docs/audit/about-page-version-drift-spec-decisions.md` — Status: ✅ Finalized (97 lines) — Grilling Alignment Log
 - **Achieved Milestones:**
-  - Executed full `/to-map` workflow with source-driven scan of `lib/`, `test/`, `docs/`, `spec/`, `plan/`, `assets/`, `android/`, `tools/`, `landingpage/` (zero assumptions; all counts verified from source).
-  - Created `docs/ARCHITECTURE.md` as the canonical architecture map (template-compliant, English technical artifact per AGENTS.md language policy).
-  - Verified architectural invariants by import-scan: `lib/domain/` is pure Dart (only `equatable`/`intl`/`adhan`/`hijri`); no `presentation → data` imports; no `data → presentation` imports; `lib/core/` imports no other layer.
-  - Verified runtime facts: 9-state sealed `DisplayState` with deterministic priority (prayer → midnight → slideshow → imam_schedule → wisdom → standby, 1 s tick); DB schema v11 (5 tables); 514 cities; 11 wisdom quotes; 114 Dart files in `lib/`; 59 test files; DI = RepositoryProvider ×7 + BlocProvider ×3 global.
-  - Added discovery links: `README.md` Dokumentasi table row + `AGENTS.md` Documentation bullet.
-- **Dead-Ends (Do NOT Repeat):**
-  - None encountered in this session.
-- **Updated Files:**
-  - `docs/ARCHITECTURE.md` — NEW canonical architecture map (250 lines).
-  - `README.md` — added `docs/ARCHITECTURE.md` row to Dokumentasi table (pipe-aligned).
-  - `AGENTS.md` — added canonical architecture map link to Documentation bullet.
-- **Decisions Made:**
-  - `docs/ARCHITECTURE.md` is now the canonical topology document; `docs/ARCHITECTURE_PATTERNS.md` is flagged as partially stale (still describes a 5-state machine vs 9 states in code).
-  - Documented pragmatic deviation: `CalculatePrayerTimesUseCase` imports pure-Dart `adhan`/`hijri` inside the domain layer — recommend recording as an ADR.
-  - Recommended bootstrapping `CONTEXT.md` (glossary) and `docs/adr/` (decision records) per AGENTS.md expectations.
-- **Next Action / Pending:**
-  - Update or retire `docs/ARCHITECTURE_PATTERNS.md` (5-state → 9-state drift).
-  - Optionally: create `CONTEXT.md` + first ADRs (adhan/hijri domain dependency; Kemenag SIHAT method).
-  - Consider `git commit` for the docs changes (no commit requested yet; working tree also holds the `/to-init` polya-sdlc migration).
+  - **Resolved the spec's blocking contradiction (C1).** `REQ-004` (every named Display State must be a `CONTEXT.md` term) contradicted `AC-005` (all nine states must be named), because `CONTEXT.md` named only **eight of nine** — "Sholat" was the sole omission. Owner chose **Option A**: add the term. `CONTEXT.md` now defines all nine Display States.
+  - **Corrected the mandated About copy.** Now `9 status tampilan otomatis: Standby → Pre-Adzan → Adzan → Iqomah → Sholat → Slideshow Announcement → Imam Schedule → Wisdom Quote → Midnight Standby` — "status" instead of "mode", matching four domain-layer precedents and clearing the `CONTEXT.md` `_Avoid_: screen mode` collision.
+  - **Proved empirically that the defect reached the AOT path.** Read-only byte-scan of the existing release `libapp.so`: `"1.2.2"` present, `"1.4.4"` absent.
+  - **Closed the anti-regression guard hole.** `AC-011` rewritten from a `<digits>.<digits>.<digits>` regex (cannot match a bare build number) to a **structural assertion**.
+  - **Added `AC-014`** for the mixed-null manifest branch (`version: 1.4.4` with no `+`).
+  - **Re-aligned every `CONTEXT.md:NN` anchor** after the glossary amendment shifted all entries below it.
+- **Updated Files:** `CONTEXT.md` (+1 term `Sholat`), `docs/spec/...-spec.md` (v1.0.0 → v1.2.0, 31 surgical edits), `docs/audit/...-spec-clarification.md` (new), `docs/audit/...-spec-decisions.md` (new). **No production code touched.**
+- **Decisions Made:** `AC-004` verification = `flutter test --dart-define=…` only (release byte-scan declined, recorded as a `CAUTION` with a release-gate mitigation hook). Audit/Author separation preserved; the third verification pass caught two self-inflicted defects from the preceding remediation.
+- **Next Action / Pending:** `/to-plan` (completed in the following checkpoint).
 
-<!-- checkpoint-tail: /to-map completed — docs/ARCHITECTURE.md created (topology, 9 invariants, drift findings), links added to README.md + AGENTS.md. Hotspot: ARCHITECTURE_PATTERNS.md still describes 5-state machine. -->
+<!-- checkpoint-tail: Version-drift spec reached 100/100 at v1.2.0 with 14 AC after three clarification iterations; blocking contradiction resolved by adding "Sholat" to CONTEXT.md; AC-011 hardened to a structural assertion; AC-014 added for the mixed-null branch. Next: /to-plan. -->
 
 ---
 
-## 📝 Session Checkpoint: 2026-10-15 (Architecture Patterns Drift Fix + Docs Standards Bootstrap)
+## 📝 Session Checkpoint: 2026-10-23 (Phase 2 — Plan Authored, Audited, Remediated to 100/100)
 
 - **Active Memory Path:** `.agents/instructions/memory.instructions.md`
-- **Current SDLC Phase:** Bypass Mode: `/to-quick-fix` — ✅ Completed (+ documentation standards bootstrap under explicit user-approved session override)
+- **Current SDLC Phase:** Phase 2 (Devising a Plan) — ✅ Complete at **100/100**. 🛑 **Pause Rule pending:** awaiting explicit owner approval before `/to-code`. No production code written.
 - **Active Artifacts:**
-  - `docs/ARCHITECTURE_PATTERNS.md` — Status: ✅ Finalized (v2.1.0; drift fixed: 9-state model, schema v11, canonical-map banner)
-  - `CONTEXT.md` — Status: ✅ Created (domain glossary bootstrap, 19 terms, per `.agents/standards/CONTEXT-FORMAT.md`)
-  - `docs/adr/0001-kemenag-sihat-prayer-times.md` — Status: ✅ Created (Accepted)
-  - `docs/adr/0002-pure-dart-astronomy-in-domain.md` — Status: ✅ Created (Accepted)
+  - `docs/plan/about-page-version-drift-plan.md` — Status: ✅ **v1.2.0**, 15 tasks across 4 phases, **Readiness 100/100** (Completeness 40 · Clarity 30 · Alignment 30). Change set: 3 CREATE + 2 MODIFY (+ `CONTEXT.md` pre-completed).
+  - `docs/audit/about-page-version-drift-plan-clarification.md` — Status: ✅ Finalized — Iteration 1 scored **79/100** (Critical Flaw Veto), now stamped `REMEDIATION STATUS: RESOLVED` with projection `79 → 96 → 100`.
 - **Achieved Milestones:**
-  - Fixed `docs/ARCHITECTURE_PATTERNS.md` drift (1,562 → 1,252 lines, 7 surgical edits): 5-State Hierarchy → verified 9-State model (sealed class + real `StandbyState` sample + per-state trigger table); transition logic → actual priority chain (`prayer → midnight → slideshow → imam_schedule → wisdom → standby`, 1 s tick via `EvaluateDisplayStateUseCase`); UI rendering → real 9-layout switch (class names verified from `MainDisplayPage`); old v1 DB DDL → v11 summary (5 tables, FK, sequential migrations, indexes); repository note + footer (v2.1.0); canonical-map banner with illustrative-sample disclaimer.
-  - Bootstrapped `CONTEXT.md` (19 domain terms in 3 groups: Prayer Schedule, Display Features, Mosque Administration) and the first two ADRs in `docs/adr/` using `.agents/standards/` formats.
-  - Verified zero residual critical drift via grep (`5-State`, `_dbVersion = 1`, `PrayerTimeRepository`, `_populateCities` all gone). No Dart code touched — docs-only; Flutter test suite unaffected.
-  - Session override exercised: `/to-map` → `/to-quick-fix` → standards work in one session (explicitly authorized by user; `[Session Override Active]` marker printed).
-- **Dead-Ends (Do NOT Repeat):**
-  - None encountered in this session.
+  - Authored the plan implementing Spec v1.2.0 as **4 phases / 15 tasks** (all XS–S, max 2 files, vertical slices, every phase ending in `VERIFY` + `APPROVAL`): P1 seam + manifest oracle; P2 nine-state copy + widget harness; P3 structural scan, build-override proof, D-Pad invariance; P4 living docs + release gate.
+  - **Audited the plan and found 6 real defects, 2 of them measured against the live toolchain** — see KB Dead-End #7. Scored 79/100 with the Critical Flaw Veto, because both gates were red by construction.
+  - **Owner decisions recorded:** (a) `AC-011` detection rule = **Option A marker-based scan** (strip comments → match `RegExp(r'Versi ')`/`RegExp(r'Build ')` → require the seam import; plus absence scan), with the known consumer as a second layer and a **closed allowlist explicitly rejected** as brittle; (b) `TASK-013` keeps both `docs/ARCHITECTURE.md` drift corrections (`19→20 terms`, stale `1.4.3+14`) as an owner-sanctioned addition to the Spec §8 mandate, exact scope only — anything further is `NOTICED BUT NOT TOUCHING`.
+  - **Remediation pass 1 (v1.1.0):** eight surgical corrections — scoped analyzer, formatter count semantics, change-set arithmetic, `AC-003` locus, `TASK-009` cross-reference, override-isolation rule, `TASK-008` rewrite, gate-semantics note. Projection 96.
+  - **Refinement pass 2 (v1.2.0):** four closures to reach 100 — (i) `AC-003` proven by **exhaustion** (`displayName ∈ {buildName, unavailable}`, independently for each field, + non-empty/non-numeric placeholder) so it no longer rests on an uninstantiable `null` branch; (ii) `CON-006` proven by an import scan; (iii) **STEP-0 Baseline Capture** block removing every "moving number"; (iv) `RISK-002` empty-string-define defence actually asserted in `TASK-002`.
+  - Pre-verified `TASK-008`'s expected match set: only `about_section.dart:17,18,163` in all of `lib/presentation`; `splash_page.dart:51` has a lower-case *"versi lama"* comment that the capitalised marker and comment-stripping both neutralise.
+- **Dead-Ends (Do NOT Repeat):** KB #6 (tautological single-filename guard) and KB #7 (boolean gates red by construction) were both discovered and rejected in this session. KB #2/#3 also applied.
 - **Updated Files:**
-  - `docs/ARCHITECTURE_PATTERNS.md` — 7 surgical drift-fix edits.
-  - `CONTEXT.md` — NEW (domain glossary).
-  - `docs/adr/0001-kemenag-sihat-prayer-times.md` — NEW (first ADR).
-  - `docs/adr/0002-pure-dart-astronomy-in-domain.md` — NEW (second ADR).
+  - `docs/plan/about-page-version-drift-plan.md` — NEW, then v1.0.0 → v1.1.0 → **v1.2.0** via surgical edits only.
+  - `docs/audit/about-page-version-drift-plan-clarification.md` — NEW (190 lines): 7 findings (C-1…C-7), 5-Axis matrix, decision log, three-column score projection.
+  - `.agents/instructions/memory.instructions.md` — KB extended, 6 old checkpoints compacted, this checkpoint appended.
+  - **`lib/` and `test/` are untouched.** `docs/plan/` and `docs/audit/` are still untracked; no commits made.
 - **Decisions Made:**
-  - `docs/ARCHITECTURE.md` stays the single canonical topology source; `ARCHITECTURE_PATTERNS.md` is now a pattern guide whose legacy samples (Prayer Calculation, Setup Wizard, Testing) are explicitly flagged as illustrative by the banner — deeper refresh remains an optional follow-up.
-  - Kemenag SIHAT standard and pure-Dart astronomy in domain recorded as ADR-0001/ADR-0002.
-  - No commits (user instruction); changes stay uncommitted alongside the polya-sdlc toolkit migration.
+  - Every gate is **baseline-relative**, never exit-code-zero; thresholds were measured before being written.
+  - The proposed 3-way task split from the planning Q&A (`TASK-005A/B`, `013A/B`, `014A/B` → 18 tasks) was **proposed but NOT applied** — the plan still has **15 tasks**. Do not assume it exists.
+  - Plan-level residuals carried to `/to-review`: the Spec §7 table still has no `AC-003` locus (plan supplies it; Spec row is an optional Phase-1 follow-up) and release-AOT version parity remains a manual release-gate inspection by owner decision.
 - **Next Action / Pending:**
-  - Optional follow-up: deeper refresh of remaining legacy samples in `ARCHITECTURE_PATTERNS.md`.
-  - Optional: `git commit` when the user is ready (docs batch: drift fix + CONTEXT.md + ADRs).
-  - `.commandcode/settings.json` still untracked — decide track vs gitignore before committing.
+  - **Await explicit owner approval of the Pause Rule**, then run `/to-code @docs/plan/about-page-version-drift-plan.md` (interactive recommended over `auto`, because `TASK-001` touches production code and `TASK-008` depends on the final shape of `about_section.dart`).
+  - Out of scope, deliberately: Android toolchain upgrade (AGP 8.11.1 → 9.1.0 / Gradle 8.14 → 9.3.1 / Kotlin 2.2.20 → 2.4.0) and decoupling `landingpage/panduan.html:3254`'s hardcoded `1.2.2 (build 5)`.
+  - Commit decision pending: `docs/spec/`, `docs/audit/`, `docs/discovery/`, `docs/plan/` are untracked; `CONTEXT.md`, `AGENTS.md`, and this file are modified.
 
-<!-- checkpoint-tail: ARCHITECTURE_PATTERNS.md drift fixed (9-state + schema v11 + banner), CONTEXT.md bootstrapped (19 terms), ADR 0001-0002 created via standards formats. No commit (per user). Pending: optional legacy-sample refresh, commit decision, settings.json tracking. -->
+<!-- checkpoint-tail: Phase 2 COMPLETE — plan v1.2.0 at 100/100 (15 tasks, 4 phases, 3 CREATE + 2 MODIFY), audit 79→96→100 with two measured gate defects fixed and AC-003 proven by exhaustion. Pause Rule pending explicit approval; no production code touched. Next: /to-code interactive. Split proposal NOT applied. -->
 
 ---
