@@ -18,8 +18,8 @@ This document serves as the canonical architectural map of the repository. It ou
 ## 1. Executive Overview & Domain Context
 
 - **System Purpose:** Miqotul Khoir TV (MKT) is an offline-first Android TV digital signage application for mosques. It computes astronomical prayer times with zero internet dependency (Kemenag RI / SIHAT standard with elevation correction), operates a 9-state automatic display machine, and ships a 4-step setup wizard plus a PIN-protected 15-category settings menu operated entirely via D-Pad remote. Primary users: DKM administrators (operators) and congregation (viewers).
-- **Domain Ubiquitous Language:** The canonical glossary lives in [`CONTEXT.md`](../CONTEXT.md) — 19 terms across 3 groups (Prayer Schedule, Display Features, Mosque Administration), each carrying strict `_Avoid:_` synonym rules that MUST be honoured in code, specs, and user-facing copy. Key concepts: Prayer Time (Subuh, Syuruq, Dhuha, Dzuhur, Ashar, Maghrib, Isya), Pre-Adzan, Adzan, Iqomah, Sholat, Ihtiyat (time correction), Elevation / DPL, Jum'at handling, Display State, Wisdom Quote, Slideshow Announcement, Imam Schedule (imam & khatib), Midnight Standby (power saving), Treasury (Kas Masjid), Running Text.
-- **Target Environments:** Android TV / Smart TV / set-top boxes (primary; published on Google Play as `gulajava.mini.miqotul_khoir_tv`, GPL-3.0, app version 1.4.3+14). Windows/Linux/macOS desktop is also supported at runtime via SQLite FFI for development and testing.
+- **Domain Ubiquitous Language:** The canonical glossary lives in [`CONTEXT.md`](../CONTEXT.md) — 20 terms across 3 groups (Prayer Schedule, Display Features, Mosque Administration), each carrying strict `_Avoid:_` synonym rules that MUST be honoured in code, specs, and user-facing copy. Key concepts: Prayer Time (Subuh, Syuruq, Dhuha, Dzuhur, Ashar, Maghrib, Isya), Pre-Adzan, Adzan, Iqomah, Sholat, Ihtiyat (time correction), Elevation / DPL, Jum'at handling, Display State, Wisdom Quote, Slideshow Announcement, Imam Schedule (imam & khatib), Midnight Standby (power saving), Treasury (Kas Masjid), Running Text.
+- **Target Environments:** Android TV / Smart TV / set-top boxes (primary; published on Google Play as `gulajava.mini.miqotul_khoir_tv`, GPL-3.0). The in-app version is the **single source of truth** `pubspec.yaml` `version:` field, resolved at compile time through [`lib/core/app_version.dart`](../lib/core/app_version.dart) (`AppVersion`) — it is intentionally never restated as a literal here. Windows/Linux/macOS desktop is also supported at runtime via SQLite FFI for development and testing.
 
 ---
 
@@ -171,6 +171,7 @@ Frameworks & Drivers (DB, Web Server, UI Runtimes)
 ```text
 [Project Root]
 ├── lib/
+│   ├── core/app_version.dart        # Build-identity seam over the compile-time FLUTTER_BUILD_NAME/NUMBER dart-defines (pubspec.yaml = single source of truth)
 │   ├── core/theme/                  # Islamic colors, typography, ThemeData, TV safe area
 │   ├── data/
 │   │   ├── datasources/             # DatabaseHelper singleton + 6 local data sources
@@ -211,8 +212,8 @@ Frameworks & Drivers (DB, Web Server, UI Runtimes)
 | `lib/domain/` | Entities, use cases & ports | Entities + Use Cases (Core) | Pure Dart (`equatable`, `intl`, `adhan`, `hijri`) | Zero Flutter/SQLite/Firebase imports (verified); no dependency on outer layers |
 | `lib/data/` | SQLite, file & audio adapters | Interface Adapters + Frameworks & Drivers | `lib/domain/`, `sqflite`, `path_provider`, `audioplayers`, `image_picker` | Implements domain ports; must not import `lib/presentation/` (verified) |
 | `lib/presentation/` | Cubits, pages, widgets | Interface Adapters (presenters) | `lib/domain/`, `lib/core/`, `flutter_bloc`, ScreenUtil | Must not import `lib/data/` (verified); feature pages use page-scoped Cubits |
-| `lib/core/` | Islamic theme tokens & TV sizing helpers | Shared UI primitives | Flutter only | No `data`/`domain`/`presentation` imports (verified) |
-| `test/` | Automated suites mirroring `lib/` | Verification | All layers + `bloc_test`, `mocktail`, `sqflite_common_ffi`, `fake_async` | In-memory SQLite for repository tests; 59 files / 535 tests; mirrors `lib/` layer-for-layer (`test/{core,data,domain,presentation}`) plus `test/analysis/` |
+| `lib/core/` | Islamic theme tokens, TV sizing helpers, and the `AppVersion` build-identity seam | Shared UI primitives | Flutter only | No `data`/`domain`/`presentation` imports (verified); `pubspec.yaml` is the single source of truth for the in-app version, resolved via `core/app_version.dart` (`AppVersion`) |
+| `test/` | Automated suites mirroring `lib/` | Verification | All layers + `bloc_test`, `mocktail`, `sqflite_common_ffi`, `fake_async` | In-memory SQLite for repository tests; 61 files / 562 tests; mirrors `lib/` layer-for-layer (`test/{core,data,domain,presentation}`) plus `test/analysis/` |
 | `assets/` | Seed JSON, fonts, images, alert sounds | Resources | — | `cities.json` (514 records) · `wisdom_quotes.json` (11 catalog) · Poppins ×5 weights bundled for offline use · 1 alert sound |
 | `spec/` · `plan/` | SDLC artifacts (specs, plans) | Documentation | — | Historical documents may drift from code; code is the source of truth |
 | `docs/` | Architecture map, ADRs, guides | Documentation | — | `ARCHITECTURE.md` (this file) is the canonical topology; `adr/` holds Accepted decision records |
@@ -266,15 +267,15 @@ Measured reference: the full `flutter test` suite (59 files, 535 tests) complete
 
 ### 8.3 Non-Regressing Quality Ratchets (Measure & Hold)
 
-*Each baseline below was measured on 2026-10-22 and is an immutable floor. Metrics may only improve (ratchet up), never regress.*
+*Each baseline below was measured on 2026-10-22 and is an immutable floor — the test and formatting metrics were re-measured on 2026-10-23 (about-page-version-drift plan TASK-014). Metrics may only improve (ratchet up), never regress.*
 
 | Metric / Dimension | Current Ratchet Floor | Required Direction | Checked By |
 | :--- | :--- | :--- | :--- |
 | **Analyzer Errors** | `0` | Must not grow (`= 0`) | `dart analyze` |
 | **Analyzer Warnings** | `1` | Must not grow (`<= 1`) | `dart analyze` |
 | **Analyzer Infos** | `4` | Must not grow (`<= 4`) | `dart analyze` |
-| **Passing Tests** | `535 / 535` (59 files) | Must not drop | `flutter test --reporter=expanded` |
-| **Unformatted Dart Files (`lib` + `test`)** | `16` | Must not grow (`<= 16`) | `dart format --output=none --set-exit-if-changed lib test` |
+| **Passing Tests** | `562 / 562` (61 files) | Must not drop | `flutter test --reporter=expanded` |
+| **Unformatted Dart Files (`lib` + `test`)** | `15` | Must not grow (`<= 15`) | `dart format --output=none --set-exit-if-changed lib test` |
 | **TODO / FIXME in `lib/`** | `0` | Must not grow (`= 0`) | `grep -r "TODO\|FIXME" lib/` |
 | **Domain Purity Violations** (`lib/domain/` importing Flutter / SQLite / Firebase) | `0` | Must not grow (`= 0`) | import scan over `lib/domain/**` |
 | **`presentation → data` Import Violations** | `0` | Must not grow (`= 0`) | import scan over `lib/presentation/**` |
@@ -301,6 +302,7 @@ Measured reference: the full `flutter test` suite (59 files, 535 tests) complete
 | :--- | :--- | :--- | :--- |
 | `EX-003` | **Zero Unimplemented Stubs** | `android/app/build.gradle.kts` | Both stock Flutter `// TODO:` comments removed. The Application ID is specified on the line below the deleted comment, and the release `signingConfig` is wired to the `release` signing config — replaced by a comment documenting that it reads `android/signing.properties`. |
 | `EX-004` | **Zero Suppressions** | `test/presentation/cubits/imam_schedule/imam_schedule_cubit_lifecycle_test.dart` | The redundant per-line `// ignore: invalid_use_of_protected_member` was deleted. The file-level `// ignore_for_file:` on line 1 already covers the diagnostic, so suppression behaviour is unchanged while the `duplicate_ignore` warning is cleared. |
+| `EX-006` | **Release APK Size ratchet** (`CON-002` / `AC-013`) | `build/app/outputs/flutter-apk/app-release.apk` | Measured **43,240,139 bytes = +96 B** over the 43,240,043 floor on 2026-10-23 (about-page-version-drift plan TASK-014). **Resolution — owner override (explicit, 2026-10-23):** the owner verified the release build directly on a device ("Sudah saya tes dan berhasil") and accepted the +96-byte residual as-is — root cause is the approved `AppVersion` build-identity seam (all other release gates passed, including the AOT byte-scan: `1.4.4` present / `1.2.2` absent). The §8.3 floor row is deliberately NOT lowered; acceptance is recorded here subject to any future owner decision to re-open it (asset-optimisation re-measurement, or a formal time-bounded §8.4 exception with an expiry). |
 
 > [!NOTE]
 > `EX-002` (`depend_on_referenced_packages` on `lib/main.dart`) was **not** closed by promoting the dependency — measurement showed that trade-off costs +1.65 MB in every shipped APK. It was reclassified as a deliberate, time-bounded exception (`EX-005`) in §8.4, pending maintainer approval.
@@ -326,7 +328,8 @@ Measured reference: the full `flutter test` suite (59 files, 535 tests) complete
 - **Technical Debt / Hotspots:**
   - **Critical — signing credentials in version control:** `android/signing.properties` was committed with non-empty `storePassword` / `keyPassword` and was not covered by `.gitignore`, publishing the release signing credentials to both public remotes. Mitigated locally on 2026-10-22 (gitignored + untracked); **keystore rotation and history purge still require owner action** — see §8.6 `EX-001`.
   - **Packaging hygiene:** `sqflite_common_ffi` remains a dev-dependency imported by `lib/main.dart` — deliberately, because promoting it costs +1.65 MB of native SQLite in every shipped APK (§8.4 `EX-005`).
-  - **Unminified release build:** `isMinifyEnabled = false` and `isShrinkResources = false` mean R8 never runs; the APK-size ratchet is baselined against the current unminified build at **41.24 MB** (§8.3) — enabling minification later will read as a *regression* against that floor and must be handled as an explicit ratchet adjustment, not a silent drop.
+  - **In-app version binding:** `pubspec.yaml` is the single source of truth for the version displayed in-app, resolved via the `lib/core/app_version.dart` (`AppVersion`) seam; the historical about-page version drift (literal `'1.2.2'`/`'5'`) was eliminated by the about-page-version-drift plan and is enforced by `test/analysis/app_version_consistency_test.dart` (manifest-parity oracle + structural anti-regression scan).
+  - **Unminified release build:** `isMinifyEnabled = false` and `isShrinkResources = false` mean R8 never runs; the APK-size ratchet is baselined against the current unminified build at **41.24 MB** (§8.3) — enabling minification later will read as a *regression* against that floor and must be handled as an explicit ratchet adjustment, not a silent drop. Re-measured 2026-10-23: **43,240,139 bytes (+96 B over the floor)** — owner override accepted after on-device verification (`EX-006`, §8.5); optimizing the oversized PNG assets below remains the natural path to bring the artifact back under the floor.
   - **Oversized image assets:** `assets/images/mosque_silhouette.png` (6.63 MB), `mktv_icon_large_transparent.png` (2.34 MB) and `mktv_icon_large.png` (1.47 MB) are uncompressed PNGs totalling 11.55 MB of the 41.24 MB APK — the largest addressable payload. Converting them to WebP/optimised PNG, or dropping the unused variants, would shrink the artifact substantially.
   - **Manual DI in `main.dart`:** all wiring lives in one widget builder; fine at current scale, revisit when the provider count grows.
   - **No CI pipeline checked in:** neither `.github/` nor any CI runner exists — `dart analyze` and the full test suite currently run locally only.

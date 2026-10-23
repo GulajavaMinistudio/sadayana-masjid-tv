@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../core/app_version.dart';
 import '../../../../core/theme/islamic_colors.dart';
 import '../../../../core/theme/islamic_typography.dart';
 import '../../../widgets/glassmorphism_card.dart';
@@ -14,8 +15,6 @@ class _AppInfo {
   const _AppInfo._();
 
   static const String appName = 'Miqotul Khoir TV';
-  static const String version = '1.2.2';
-  static const String buildNumber = '5';
   static const String license = 'GPL v3';
 
   static const String description =
@@ -32,7 +31,9 @@ class _AppInfo {
     'Kalkulasi waktu sholat 100% offline — standar Kemenag RI (SIHAT)',
     '7 waktu sholat: Subuh, Syuruq, Dhuha, Dzuhur, Ashar, Maghrib, Isya',
     'Koreksi ketinggian tempat (DPL/Elevasi) otomatis untuk kota dataran tinggi',
-    '5 mode tampilan otomatis: Standby → Pre-Adzan → Adzan → Iqomah → Sholat',
+    '9 status tampilan otomatis: Standby → Pre-Adzan → Adzan → Iqomah → '
+        'Sholat → Slideshow Announcement → Imam Schedule → Wisdom Quote → '
+        'Midnight Standby',
     'Database 514 kota & 34 provinsi Indonesia — tanpa koneksi internet',
     'D-Pad navigation — dioptimalkan untuk Remote TV Android',
     'Informasi Kas Masjid & Running Text yang dapat dikustomisasi',
@@ -160,7 +161,7 @@ class _AboutSectionState extends State<AboutSection> {
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      'Versi ${_AppInfo.version}  ·  Build ${_AppInfo.buildNumber}  ·  ${_AppInfo.license}',
+                      'Versi ${AppVersion.displayName}  ·  Build ${AppVersion.displayBuildNumber}  ·  ${_AppInfo.license}',
                       style: IslamicTypography.caption(
                         color: IslamicColors.textMuted,
                       ),

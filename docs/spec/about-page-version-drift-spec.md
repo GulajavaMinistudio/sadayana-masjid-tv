@@ -88,6 +88,8 @@ lib/presentation/pages/settings/sections/about_section.dart   ← RENDER SITE (t
 > [!CAUTION]
 > **Residual risk — the AOT / release path carries no empirical version-parity evidence.** Owner decision, 2026-10-23 (`/to-grill-me` Iteration 2, Item 1): `AC-004`'s sole verification procedure is `flutter test --dart-define=…`; the release-artifact byte-scan was declined. Consequently, the guarantee that a **release** build carries the manifest version rests on *source reasoning* — the dart-define injection at `flutter_command.dart:1506-1514` is build-mode-agnostic — and **not** on direct observation of a release artifact.
 >
+> **AMENDED 2026-10-23 (owner decision, Option A):** the `--dart-define` override invocation proved unexecutable — Flutter 3.47.6 rejects the framework-reserved `FLUTTER_BUILD_NAME` / `FLUTTER_BUILD_NUMBER` keys. `AC-004` is now re-bound to the two-loci procedure in §6.1 (sentinel case + release-gate byte-scan), so the release-artifact evidence originally declined here is **now mandatory** through `AC-004` locus (2) / `AC-013`'s release build. The residual-risk framing below is retained as the historical decision record.
+>
 > **Mitigation hook:** `AC-013`'s release build (`flutter build apk --release --target-platform android-arm64`) already runs in `check:full`. At that point the artifact's version MUST be re-confirmed by inspection — `lib/arm64-v8a/libapp.so` contains the manifest version string and does **not** contain the previous one — as a manual **release-gate** step. This is a release checkpoint, not an automated test; it is recorded here so that the residual risk is owned and revisited rather than forgotten.
 >
 > Recorded in `docs/audit/about-page-version-drift-spec-clarification.md` Iteration 2, Finding I2-1, and in `docs/audit/about-page-version-drift-spec-decisions.md` §Key Decisions Settled (5).
@@ -543,12 +545,12 @@ Frameworks & Drivers                          ← UNTOUCHED
   *When* the About section renders,  
   *Then* the version and build fields display the non-numeric placeholder `tidak tersedia`, the section still renders its complete layout, and **no** numeric version string is presented as if it were the real version.
 
-- **AC-004 (Build-Override Correctness — REQ-001):**
-  *Given* the widget test suite executed with `--dart-define=FLUTTER_BUILD_NAME=9.9.9 --dart-define=FLUTTER_BUILD_NUMBER=99`, overriding the manifest's `1.4.4` / `15`,  
-  *When* the About section renders,  
-  *Then* the rendered version line reads `Versi 9.9.9  ·  Build 99  ·  GPL v3` — the **overridden** values, not the manifest's — proving the displayed value is a genuine property of the compiled artifact rather than a restatement of the file.  
-  *Procedure:* `flutter test --dart-define=FLUTTER_BUILD_NAME=9.9.9 --dart-define=FLUTTER_BUILD_NUMBER=99 test/presentation/pages/settings/sections/about_section_test.dart`. Device-free, no new tooling, `check:fast`-grade.  
-  *Scope limit:* this criterion proves the **define → rendered-UI** path. The **release-AOT** path carries no empirical version-parity evidence — see the `[!CAUTION]` in §1.2 for the accepted residual risk and its release-gate mitigation hook.
+- **AC-004 (Define → Rendered-UI Correctness — REQ-001)** *(owner-amended 2026-10-23 — Option A)*:
+  *Given* the About section rendered by a build whose compiled defines are the manifest's `1.4.4` / `15`,  
+  *When* the sentinel widget case executes (`flutter test`, default invocation),  
+  *Then* the rendered version line equals `Versi $appBuildName  ·  Build $appBuildNumber  ·  GPL v3` — the **SDK accessor** values, not a restatement — so a re-introduced hardcoded literal fails immediately.  
+  *Procedure (two loci):* (1) the `about_section_test.dart` sentinel case above; (2) the TASK-014 release-gate byte-scan of the release `libapp.so` (`1.4.4` present / `1.2.2` absent), proving the manifest values **materialize** in the compiled AOT artifact.  
+  *Deviation record (measured 2026-10-23):* the original `--dart-define=FLUTTER_BUILD_NAME=9.9.9 …` override invocation is **unexecutable on this toolchain** — Flutter 3.47.6 treats `FLUTTER_BUILD_NAME` / `FLUTTER_BUILD_NUMBER` as framework-reserved keys and rejects them, and `flutter test --help` provides no `--build-name`/`--build-number` flags. Owner decision (Option A): re-bind the criterion to the two-loci procedure. The override capability is preserved through `flutter build`'s sanctioned `--build-name`/`--build-number` flags, which feed the same injection point (`flutter_command.dart:1506-1514`).
 
 - **AC-005 (Display-State Copy Correction — REQ-003):**
   *Given* the About section's feature list,  
@@ -642,7 +644,7 @@ Frameworks & Drivers                          ← UNTOUCHED
 
 | Criterion | Verification locus | Command | Pass condition |
 | :--- | :--- | :--- | :--- |
-| **AC-004** — build-override correctness | Phase 3 `check:fast` / `check:task` (**a `flutter test` case**, run with a dart-define override) | `flutter test --dart-define=FLUTTER_BUILD_NAME=9.9.9 --dart-define=FLUTTER_BUILD_NUMBER=99 test/presentation/pages/settings/sections/about_section_test.dart` | The About screen renders `9.9.9` / `99`, not the manifest's `1.4.4` / `15` — proving the displayed value is a property of the compiled define, not a restatement of the file. *Scope limit:* the release-AOT path is **not** covered by this criterion — see the `[!CAUTION]` in §1.2 |
+| **AC-004** — define → rendered-UI correctness *(amended 2026-10-23, Option A)* | Phase 3 `check:task` sentinel (default run) **+** Phase 4 release-gate byte-scan | `flutter test test/presentation/pages/settings/sections/about_section_test.dart --reporter=expanded`; then the TASK-014 `libapp.so` byte-scan | Sentinel: rendered line == `Versi $appBuildName  ·  Build $appBuildNumber  ·  GPL v3` (SDK accessor, never a literal); release gate: `1.4.4` present / `1.2.2` absent in `libapp.so`. The `--dart-define` override invocation is unexecutable — framework-reserved keys (measured 2026-10-23, see §6.1). |
 | **AC-014** — partial manifest version | Phase 3 `check:task` (**a `flutter test` case**) | `flutter test test/analysis/app_version_consistency_test.dart` | The guard test's parser yields a **null** build number for a manifest with no `+`, **without throwing**; the rendered version field is unaffected while the build field renders `tidak tersedia` |
 | **AC-013** — APK size ratchet | Phase 3 `check:full` (**not** a `flutter test` case — requires a build invocation) | `flutter build apk --release --target-platform android-arm64` | Artifact size ≤ **41.24 MB (43,240,043 bytes)**; must not grow. *Release-gate step:* the artifact's version is re-confirmed by inspection here — see the `[!CAUTION]` in §1.2 |
 | **AC-009** — analyzer ratchet | Phase 3 `check:fast` | `dart analyze lib test` | 0 errors / 0 warnings / ≤ 4 infos (see the scope note on AC-009) |
