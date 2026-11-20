@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,16 +48,36 @@ ImamScheduleDisplay _slot({
 
 // Jadwal Senin reguler (5 slot: 3 terisi, 2 kosong)
 final _mondaySlots = [
-  _slot(dayOfWeek: 1, prayerName: 'subuh', prayerLabel: 'Subuh', imamName: 'Ust. Ahmad'),
-  _slot(dayOfWeek: 1, prayerName: 'dzuhur', prayerLabel: 'Dzuhur', imamName: 'Ust. Budi'),
+  _slot(
+    dayOfWeek: 1,
+    prayerName: 'subuh',
+    prayerLabel: 'Subuh',
+    imamName: 'Ust. Ahmad',
+  ),
+  _slot(
+    dayOfWeek: 1,
+    prayerName: 'dzuhur',
+    prayerLabel: 'Dzuhur',
+    imamName: 'Ust. Budi',
+  ),
   _slot(dayOfWeek: 1, prayerName: 'ashar', prayerLabel: 'Ashar'), // kosong
-  _slot(dayOfWeek: 1, prayerName: 'maghrib', prayerLabel: 'Maghrib', imamName: 'Ust. Candra'),
+  _slot(
+    dayOfWeek: 1,
+    prayerName: 'maghrib',
+    prayerLabel: 'Maghrib',
+    imamName: 'Ust. Candra',
+  ),
   _slot(dayOfWeek: 1, prayerName: 'isya', prayerLabel: 'Isya'), // kosong
 ];
 
 // Jadwal Jumat (dengan khatib dan imam)
 final _fridaySlots = [
-  _slot(dayOfWeek: 5, prayerName: 'subuh', prayerLabel: 'Subuh', imamName: 'Ust. Ali'),
+  _slot(
+    dayOfWeek: 5,
+    prayerName: 'subuh',
+    prayerLabel: 'Subuh',
+    imamName: 'Ust. Ali',
+  ),
   _slot(
     dayOfWeek: 5,
     prayerName: 'jumat',
@@ -65,8 +85,18 @@ final _fridaySlots = [
     imamName: 'Ust. Zaid',
     khatibName: 'Ust. Mahmud',
   ),
-  _slot(dayOfWeek: 5, prayerName: 'ashar', prayerLabel: 'Ashar', imamName: 'Ust. Ali'),
-  _slot(dayOfWeek: 5, prayerName: 'maghrib', prayerLabel: 'Maghrib', imamName: 'Ust. Ali'),
+  _slot(
+    dayOfWeek: 5,
+    prayerName: 'ashar',
+    prayerLabel: 'Ashar',
+    imamName: 'Ust. Ali',
+  ),
+  _slot(
+    dayOfWeek: 5,
+    prayerName: 'maghrib',
+    prayerLabel: 'Maghrib',
+    imamName: 'Ust. Ali',
+  ),
   _slot(dayOfWeek: 5, prayerName: 'isya', prayerLabel: 'Isya'),
 ];
 
@@ -97,13 +127,19 @@ void main() {
     mockSettingsCubit = MockSettingsCubit();
     when(() => mockSettingsCubit.state).thenReturn(
       SettingsLoaded(
-        settings: Settings(mosqueName: mosqueName, mosqueAddress: 'Jl. Masjid No.1'),
+        settings: Settings(
+          mosqueName: mosqueName,
+          mosqueAddress: 'Jl. Masjid No.1',
+        ),
       ),
     );
     when(() => mockSettingsCubit.stream).thenAnswer(
       (_) => Stream.value(
         SettingsLoaded(
-          settings: Settings(mosqueName: mosqueName, mosqueAddress: 'Jl. Masjid No.1'),
+          settings: Settings(
+            mosqueName: mosqueName,
+            mosqueAddress: 'Jl. Masjid No.1',
+          ),
         ),
       ),
     );
@@ -143,17 +179,16 @@ void main() {
   });
 
   group('ImamScheduleLayout Widget Tests', () {
-    testWidgets(
-      '(a) layout render tanpa overflow pada resolusi 1920x1080',
-      (tester) async {
-        setTvSize(tester);
-        await tester.pumpWidget(buildTestable(_mondayState));
-        await tester.pumpAndSettle();
+    testWidgets('(a) layout render tanpa overflow pada resolusi 1920x1080', (
+      tester,
+    ) async {
+      setTvSize(tester);
+      await tester.pumpWidget(buildTestable(_mondayState));
+      await tester.pumpAndSettle();
 
-        expect(tester.takeException(), isNull);
-        expect(find.byType(ImamScheduleLayout), findsOneWidget);
-      },
-    );
+      expect(tester.takeException(), isNull);
+      expect(find.byType(ImamScheduleLayout), findsOneWidget);
+    });
 
     testWidgets(
       '(b) HeaderWidget ditampilkan tanpa exception (currentTime ada)',
@@ -168,69 +203,60 @@ void main() {
       },
     );
 
-    testWidgets(
-      '(c) badge nama hari ditampilkan: SENIN',
-      (tester) async {
-        setTvSize(tester);
-        await tester.pumpWidget(buildTestable(_mondayState));
-        await tester.pumpAndSettle();
+    testWidgets('(c) badge nama hari ditampilkan: SENIN', (tester) async {
+      setTvSize(tester);
+      await tester.pumpWidget(buildTestable(_mondayState));
+      await tester.pumpAndSettle();
 
-        // Badge berisi '══  SENIN  ══'
-        expect(find.textContaining('SENIN'), findsOneWidget);
-      },
-    );
+      // Badge berisi '══  SENIN  ══'
+      expect(find.textContaining('SENIN'), findsOneWidget);
+    });
 
-    testWidgets(
-      '(d) semua label waktu sholat ditampilkan (5 baris)',
-      (tester) async {
-        setTvSize(tester);
-        await tester.pumpWidget(buildTestable(_mondayState));
-        await tester.pumpAndSettle();
+    testWidgets('(d) semua label waktu sholat ditampilkan (5 baris)', (
+      tester,
+    ) async {
+      setTvSize(tester);
+      await tester.pumpWidget(buildTestable(_mondayState));
+      await tester.pumpAndSettle();
 
-        expect(find.text('Subuh'), findsAtLeastNWidgets(1));
-        expect(find.text('Dzuhur'), findsAtLeastNWidgets(1));
-        expect(find.text('Ashar'), findsAtLeastNWidgets(1));
-        expect(find.text('Maghrib'), findsAtLeastNWidgets(1));
-        expect(find.text('Isya'), findsAtLeastNWidgets(1));
-      },
-    );
+      expect(find.text('Subuh'), findsAtLeastNWidgets(1));
+      expect(find.text('Dzuhur'), findsAtLeastNWidgets(1));
+      expect(find.text('Ashar'), findsAtLeastNWidgets(1));
+      expect(find.text('Maghrib'), findsAtLeastNWidgets(1));
+      expect(find.text('Isya'), findsAtLeastNWidgets(1));
+    });
 
-    testWidgets(
-      '(e) slot kosong menampilkan teks "Imam belum tersedia"',
-      (tester) async {
-        setTvSize(tester);
-        await tester.pumpWidget(buildTestable(_mondayState));
-        await tester.pumpAndSettle();
+    testWidgets('(e) slot kosong menampilkan teks "Imam belum tersedia"', (
+      tester,
+    ) async {
+      setTvSize(tester);
+      await tester.pumpWidget(buildTestable(_mondayState));
+      await tester.pumpAndSettle();
 
-        // Ada 2 slot kosong (Ashar dan Isya) → 2x teks
-        expect(find.text('Imam belum tersedia'), findsNWidgets(2));
-      },
-    );
+      // Ada 2 slot kosong (Ashar dan Isya) → 2x teks
+      expect(find.text('Imam belum tersedia'), findsNWidgets(2));
+    });
 
-    testWidgets(
-      '(f) slot terisi menampilkan nama imam',
-      (tester) async {
-        setTvSize(tester);
-        await tester.pumpWidget(buildTestable(_mondayState));
-        await tester.pumpAndSettle();
+    testWidgets('(f) slot terisi menampilkan nama imam', (tester) async {
+      setTvSize(tester);
+      await tester.pumpWidget(buildTestable(_mondayState));
+      await tester.pumpAndSettle();
 
-        expect(find.text('Ust. Ahmad'), findsOneWidget);
-        expect(find.text('Ust. Budi'), findsOneWidget);
-        expect(find.text('Ust. Candra'), findsOneWidget);
-      },
-    );
+      expect(find.text('Ust. Ahmad'), findsOneWidget);
+      expect(find.text('Ust. Budi'), findsOneWidget);
+      expect(find.text('Ust. Candra'), findsOneWidget);
+    });
 
-    testWidgets(
-      '(g) GlassmorphismCard ditampilkan di body dan footer',
-      (tester) async {
-        setTvSize(tester);
-        await tester.pumpWidget(buildTestable(_mondayState));
-        await tester.pumpAndSettle();
+    testWidgets('(g) GlassmorphismCard ditampilkan di body dan footer', (
+      tester,
+    ) async {
+      setTvSize(tester);
+      await tester.pumpWidget(buildTestable(_mondayState));
+      await tester.pumpAndSettle();
 
-        // Minimal 2 card: 1 body + 1 footer
-        expect(find.byType(GlassmorphismCard), findsAtLeastNWidgets(2));
-      },
-    );
+      // Minimal 2 card: 1 body + 1 footer
+      expect(find.byType(GlassmorphismCard), findsAtLeastNWidgets(2));
+    });
 
     testWidgets(
       '(h) LinearProgressIndicator ditampilkan di footer dengan nilai yang benar',
@@ -257,33 +283,31 @@ void main() {
     // Skenario Jumat: khatib + imam
     // -------------------------------------------------------------------------
 
-    testWidgets(
-      '(i) Jumat: badge menampilkan nama hari JUM\'AT',
-      (tester) async {
-        setTvSize(tester);
-        await tester.pumpWidget(buildTestable(_fridayState));
-        await tester.pumpAndSettle();
+    testWidgets('(i) Jumat: badge menampilkan nama hari JUM\'AT', (
+      tester,
+    ) async {
+      setTvSize(tester);
+      await tester.pumpWidget(buildTestable(_fridayState));
+      await tester.pumpAndSettle();
 
-        expect(find.textContaining("JUM'AT"), findsOneWidget);
-      },
-    );
+      expect(find.textContaining("JUM'AT"), findsOneWidget);
+    });
 
-    testWidgets(
-      '(j) Jumat: slot jumat menampilkan Khatib dan Imam',
-      (tester) async {
-        setTvSize(tester);
-        await tester.pumpWidget(buildTestable(_fridayState));
-        await tester.pumpAndSettle();
+    testWidgets('(j) Jumat: slot jumat menampilkan Khatib dan Imam', (
+      tester,
+    ) async {
+      setTvSize(tester);
+      await tester.pumpWidget(buildTestable(_fridayState));
+      await tester.pumpAndSettle();
 
-        // Label baris
-        expect(find.text('Khatib:'), findsOneWidget);
-        expect(find.text('Imam:'), findsOneWidget);
+      // Label baris
+      expect(find.text('Khatib:'), findsOneWidget);
+      expect(find.text('Imam:'), findsOneWidget);
 
-        // Nama-nama
-        expect(find.text('Ust. Mahmud'), findsOneWidget); // khatib
-        expect(find.text('Ust. Zaid'), findsOneWidget); // imam
-      },
-    );
+      // Nama-nama
+      expect(find.text('Ust. Mahmud'), findsOneWidget); // khatib
+      expect(find.text('Ust. Zaid'), findsOneWidget); // imam
+    });
 
     testWidgets(
       '(k) Jumat slot kosong imam menampilkan "Imam belum tersedia"',
@@ -321,16 +345,15 @@ void main() {
       },
     );
 
-    testWidgets(
-      '(l) nama masjid ditampilkan dari SettingsCubit',
-      (tester) async {
-        setTvSize(tester);
-        // mosqueName = 'Masjid Al-Ikhlas' (sudah di-setup di buildTestable)
-        await tester.pumpWidget(buildTestable(_mondayState));
-        await tester.pumpAndSettle();
+    testWidgets('(l) nama masjid ditampilkan dari SettingsCubit', (
+      tester,
+    ) async {
+      setTvSize(tester);
+      // mosqueName = 'Masjid Al-Ikhlas' (sudah di-setup di buildTestable)
+      await tester.pumpWidget(buildTestable(_mondayState));
+      await tester.pumpAndSettle();
 
-        expect(find.text('Masjid Al-Ikhlas'), findsWidgets);
-      },
-    );
+      expect(find.text('Masjid Al-Ikhlas'), findsWidgets);
+    });
   });
 }

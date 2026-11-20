@@ -10,7 +10,7 @@
 // design size + MaterialApp with the dark Islamic theme + a plain Scaffold,
 // with the tester view forced to 1920×1080 at 1.0 density.
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';

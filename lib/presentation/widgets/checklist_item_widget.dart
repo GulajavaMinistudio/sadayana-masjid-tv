@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../core/theme/islamic_colors.dart';
@@ -82,7 +82,9 @@ class ChecklistItemWidget extends StatelessWidget {
   /// Teal untuk Quran (🕌), amber untuk Hadits (📖).
   Widget _buildBadge() {
     final isQuran = type == 'quran';
-    final badgeColor = isQuran ? IslamicColors.primaryTeal : IslamicColors.goldAmber;
+    final badgeColor = isQuran
+        ? IslamicColors.primaryTeal
+        : IslamicColors.goldAmber;
     final badgeIcon = isQuran ? '🕌' : '📖';
 
     return Container(
@@ -112,9 +114,7 @@ class ChecklistItemWidget extends StatelessWidget {
           translationText,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: IslamicTypography.body(
-            color: IslamicColors.textPrimary,
-          ),
+          style: IslamicTypography.body(color: IslamicColors.textPrimary),
         ),
       ],
     );

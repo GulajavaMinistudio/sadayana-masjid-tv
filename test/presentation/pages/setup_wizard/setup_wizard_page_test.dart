@@ -1,5 +1,5 @@
 import 'package:bloc_test/bloc_test.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,9 +28,11 @@ class MockSettingsRepository extends Mock implements SettingsRepository {}
 
 class MockCityRepository extends Mock implements CityRepository {}
 
-class MockSlideshowImageRepository extends Mock implements SlideshowImageRepository {}
+class MockSlideshowImageRepository extends Mock
+    implements SlideshowImageRepository {}
 
-class MockSlideshowFileStorageService extends Mock implements SlideshowFileStorageService {}
+class MockSlideshowFileStorageService extends Mock
+    implements SlideshowFileStorageService {}
 
 void main() {
   late MockSetupWizardCubit mockCubit;
@@ -76,8 +78,12 @@ void main() {
                 value: mockSettingsRepo,
               ),
               RepositoryProvider<CityRepository>.value(value: mockCityRepo),
-              RepositoryProvider<SlideshowImageRepository>.value(value: mockSlideshowRepo),
-              RepositoryProvider<SlideshowFileStorageService>.value(value: mockSlideshowStorage),
+              RepositoryProvider<SlideshowImageRepository>.value(
+                value: mockSlideshowRepo,
+              ),
+              RepositoryProvider<SlideshowFileStorageService>.value(
+                value: mockSlideshowStorage,
+              ),
             ],
             child: BlocProvider<SetupWizardCubit>.value(
               value: mockCubit,
